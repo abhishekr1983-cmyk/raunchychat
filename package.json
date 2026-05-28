@@ -1,0 +1,12 @@
+{
+  "name": "raunchychat",
+  "version": "1.0.0",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "cd client && npm install && VITE_SOCKET_URL='' npm run build",
+    "start": "cd server && node index.js",
+    "install-deps": "cd server && npm install"
+  }
+}
