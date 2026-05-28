@@ -1,49 +1,59 @@
-const Database = require('better-sqlite3');
+const { createClient } = require('@libsql/client');
 const path = require('path');
 
-// Use RAILWAY_VOLUME_MOUNT_PATH if available (persistent disk), else local
-const dbDir = process.env.RAILWAY_VOLUME_MOUNT_PATH || __dirname;
-const db = new Database(path.join(dbDir, 'chat.db'));
+// Production: set TURSO_DATABASE_URL + TURSO_AUTH_TOKEN env vars
+// Local dev: falls back to a local SQLite file
+const url = process.env.TURSO_DATABASE_URL || `file:${path.join(__dirname, 'chat.db')}`;
+const authToken = process.env.TURSO_AUTH_TOKEN || undefined;
 
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+const client = createClient({ url, authToken });
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE NOT NULL,
-    email TEXT UNIQUE,
-    password_hash TEXT,
-    gender TEXT NOT NULL,
-    age INTEGER NOT NULL,
-    state TEXT NOT NULL,
-    country TEXT NOT NULL,
-    is_guest INTEGER DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
+async function initDB() {
+  // Create tables
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT UNIQUE NOT NULL,
+      email TEXT UNIQUE,
+      password_hash TEXT,
+      gender TEXT NOT NULL,
+      age INTEGER NOT NULL,
+      state TEXT NOT NULL,
+      country TEXT NOT NULL,
+      is_guest INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
 
-  CREATE TABLE IF NOT EXISTS rooms (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT UNIQUE NOT NULL,
-    description TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS rooms (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      description TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
 
-  CREATE TABLE IF NOT EXISTS private_messages (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    sender_id INTEGER NOT NULL,
-    receiver_id INTEGER NOT NULL,
-    content TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (sender_id) REFERENCES users(id),
-    FOREIGN KEY (receiver_id) REFERENCES users(id)
-  );
-`);
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS private_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sender_id INTEGER NOT NULL,
+      receiver_id INTEGER NOT NULL,
+      content TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (sender_id) REFERENCES users(id),
+      FOREIGN KEY (receiver_id) REFERENCES users(id)
+    )
+  `);
 
-// Single global room — everyone connects here
-db.prepare('DELETE FROM rooms').run();
-db.prepare(
-  'INSERT INTO rooms (id, name, description) VALUES (1, ?, ?)'
-).run('Global', 'Everyone is here');
+  // Single global room — upsert so we don't duplicate on restart
+  await client.execute('DELETE FROM rooms');
+  await client.execute({
+    sql: 'INSERT INTO rooms (id, name, description) VALUES (1, ?, ?)',
+    args: ['Global', 'Everyone is here'],
+  });
 
-module.exports = db;
+  console.log('Database ready');
+}
+
+module.exports = { client, initDB };

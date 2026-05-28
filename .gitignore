@@ -3,6 +3,8 @@ client/node_modules/
 server/node_modules/
 client/dist/
 server/chat.db
+server/chat.db-shm
+server/chat.db-wal
 .env
 *.log
 .DS_Store

@@ -4,6 +4,7 @@ const path = require('path');
 const { Server } = require('socket.io');
 const cors = require('cors');
 
+const { initDB } = require('./db');
 const authRoutes = require('./routes/auth');
 const roomRoutes = require('./routes/rooms');
 const { setupSocketHandlers } = require('./socket/handlers');
@@ -30,4 +31,12 @@ app.get('*', (_, res) => res.sendFile(path.join(distPath, 'index.html')));
 setupSocketHandlers(io);
 
 const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+
+initDB()
+  .then(() => {
+    server.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+  })
+  .catch((err) => {
+    console.error('Failed to initialize database:', err);
+    process.exit(1);
+  });

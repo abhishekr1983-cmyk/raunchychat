@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const db = require('../db');
+const { client } = require('../db');
 const { JWT_SECRET } = require('../middleware/auth');
 
 const router = express.Router();
@@ -17,23 +17,29 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Username must be 3–24 characters' });
     }
     if (Number(age) < 18 || Number(age) > 120) {
-      return res.status(400).json({ error: 'Age must be 13 or older' });
+      return res.status(400).json({ error: 'Age must be 18 or older' });
     }
 
-    const existing = db.prepare('SELECT id FROM users WHERE username = ? OR email = ?').get(username, email);
+    const existing = (await client.execute({
+      sql: 'SELECT id FROM users WHERE username = ? OR email = ?',
+      args: [username, email],
+    })).rows[0];
+
     if (existing) {
       return res.status(409).json({ error: 'Username or email already taken' });
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
-    const result = db.prepare(
-      'INSERT INTO users (username, email, password_hash, gender, age, state, country, is_guest) VALUES (?, ?, ?, ?, ?, ?, ?, 0)'
-    ).run(username, email, passwordHash, gender, Number(age), state, country);
+    const result = await client.execute({
+      sql: 'INSERT INTO users (username, email, password_hash, gender, age, state, country, is_guest) VALUES (?, ?, ?, ?, ?, ?, ?, 0)',
+      args: [username, email, passwordHash, gender, Number(age), state, country],
+    });
 
-    const token = jwt.sign({ userId: result.lastInsertRowid }, JWT_SECRET, { expiresIn: '7d' });
+    const userId = Number(result.lastInsertRowid);
+    const token = jwt.sign({ userId }, JWT_SECRET, { expiresIn: '7d' });
     res.json({
       token,
-      user: { id: result.lastInsertRowid, username, email, gender, age: Number(age), state, country, isGuest: false },
+      user: { id: userId, username, email, gender, age: Number(age), state, country, isGuest: false },
     });
   } catch (err) {
     console.error(err);
@@ -48,20 +54,24 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Email and password required' });
     }
 
-    const user = db.prepare('SELECT * FROM users WHERE email = ? AND is_guest = 0').get(email);
+    const user = (await client.execute({
+      sql: 'SELECT * FROM users WHERE email = ? AND is_guest = 0',
+      args: [email],
+    })).rows[0];
+
     if (!user || !(await bcrypt.compare(password, user.password_hash))) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ userId: Number(user.id) }, JWT_SECRET, { expiresIn: '7d' });
     res.json({
       token,
       user: {
-        id: user.id,
+        id: Number(user.id),
         username: user.username,
         email: user.email,
         gender: user.gender,
-        age: user.age,
+        age: Number(user.age),
         state: user.state,
         country: user.country,
         isGuest: false,
@@ -73,7 +83,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
-router.post('/guest', (req, res) => {
+router.post('/guest', async (req, res) => {
   try {
     const { username, gender, age, state, country } = req.body;
 
@@ -84,22 +94,28 @@ router.post('/guest', (req, res) => {
       return res.status(400).json({ error: 'Username must be 3–24 characters' });
     }
     if (Number(age) < 18 || Number(age) > 120) {
-      return res.status(400).json({ error: 'Age must be 13 or older' });
+      return res.status(400).json({ error: 'Age must be 18 or older' });
     }
 
-    const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
+    const existing = (await client.execute({
+      sql: 'SELECT id FROM users WHERE username = ?',
+      args: [username],
+    })).rows[0];
+
     if (existing) {
       return res.status(409).json({ error: 'Username already taken, please choose another' });
     }
 
-    const result = db.prepare(
-      'INSERT INTO users (username, gender, age, state, country, is_guest) VALUES (?, ?, ?, ?, ?, 1)'
-    ).run(username, gender, Number(age), state, country);
+    const result = await client.execute({
+      sql: 'INSERT INTO users (username, gender, age, state, country, is_guest) VALUES (?, ?, ?, ?, ?, 1)',
+      args: [username, gender, Number(age), state, country],
+    });
 
-    const token = jwt.sign({ userId: result.lastInsertRowid }, JWT_SECRET, { expiresIn: '24h' });
+    const userId = Number(result.lastInsertRowid);
+    const token = jwt.sign({ userId }, JWT_SECRET, { expiresIn: '24h' });
     res.json({
       token,
-      user: { id: result.lastInsertRowid, username, gender, age: Number(age), state, country, isGuest: true },
+      user: { id: userId, username, gender, age: Number(age), state, country, isGuest: true },
     });
   } catch (err) {
     console.error(err);

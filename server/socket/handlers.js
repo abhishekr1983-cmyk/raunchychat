@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const db = require('../db');
+const { client } = require('../db');
 const { JWT_SECRET } = require('../middleware/auth');
 
 const socketToUser = new Map(); // socketId -> user
@@ -14,15 +14,23 @@ function pendingKey(a, b) { return `${a}-${b}`; }
 function setupSocketHandlers(io) {
   io.on('connection', (socket) => {
 
-    socket.on('authenticate', (token) => {
+    socket.on('authenticate', async (token) => {
       try {
         const { userId } = jwt.verify(token, JWT_SECRET);
-        const row = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+        const row = (await client.execute({
+          sql: 'SELECT * FROM users WHERE id = ?',
+          args: [userId],
+        })).rows[0];
+
         if (!row) return socket.emit('auth-error', 'User not found');
 
         const user = {
-          id: row.id, username: row.username, gender: row.gender,
-          age: row.age, state: row.state, country: row.country,
+          id: Number(row.id),
+          username: row.username,
+          gender: row.gender,
+          age: Number(row.age),
+          state: row.state,
+          country: row.country,
           isGuest: row.is_guest === 1,
         };
 
@@ -67,31 +75,34 @@ function setupSocketHandlers(io) {
 
     // ── Private messaging ───────────────────────────────────────
 
-    socket.on('open-conversation', ({ withUserId }) => {
+    socket.on('open-conversation', async ({ withUserId }) => {
       const user = socketToUser.get(socket.id);
       if (!user) return;
 
-      const history = db.prepare(`
-        SELECT pm.id, pm.sender_id, pm.receiver_id, pm.content, pm.created_at,
-               s.username AS sender_name
-        FROM private_messages pm
-        JOIN users s ON pm.sender_id = s.id
-        WHERE (pm.sender_id = ? AND pm.receiver_id = ?)
-           OR (pm.sender_id = ? AND pm.receiver_id = ?)
-        ORDER BY pm.created_at ASC
-        LIMIT 200
-      `).all(user.id, withUserId, withUserId, user.id);
+      const result = await client.execute({
+        sql: `
+          SELECT pm.id, pm.sender_id, pm.receiver_id, pm.content, pm.created_at,
+                 s.username AS sender_name
+          FROM private_messages pm
+          JOIN users s ON pm.sender_id = s.id
+          WHERE (pm.sender_id = ? AND pm.receiver_id = ?)
+             OR (pm.sender_id = ? AND pm.receiver_id = ?)
+          ORDER BY pm.created_at ASC
+          LIMIT 200
+        `,
+        args: [user.id, withUserId, withUserId, user.id],
+      });
 
       const myPending = pendingCounts.get(pendingKey(user.id, withUserId)) || 0;
 
       socket.emit('conversation-history', {
         withUserId,
-        messages: history,
+        messages: result.rows,
         pendingCount: myPending,
       });
     });
 
-    socket.on('private-message', ({ toUserId, content }) => {
+    socket.on('private-message', async ({ toUserId, content }) => {
       const sender = socketToUser.get(socket.id);
       if (!sender || !content?.trim()) return;
 
@@ -104,9 +115,10 @@ function setupSocketHandlers(io) {
       }
 
       const trimmed = content.trim().slice(0, 2000);
-      const result = db.prepare(
-        'INSERT INTO private_messages (sender_id, receiver_id, content) VALUES (?, ?, ?)'
-      ).run(sender.id, toUserId, trimmed);
+      const result = await client.execute({
+        sql: 'INSERT INTO private_messages (sender_id, receiver_id, content) VALUES (?, ?, ?)',
+        args: [sender.id, toUserId, trimmed],
+      });
 
       // Sending to B resets B's blocked count toward A (sender is responding to B)
       pendingCounts.set(pendingKey(toUserId, sender.id), 0);
@@ -114,7 +126,7 @@ function setupSocketHandlers(io) {
       pendingCounts.set(key, count + 1);
 
       const message = {
-        id: result.lastInsertRowid,
+        id: Number(result.lastInsertRowid),
         sender_id: sender.id,
         receiver_id: toUserId,
         sender_name: sender.username,
