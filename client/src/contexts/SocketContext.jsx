@@ -8,6 +8,7 @@ export function SocketProvider({ children }) {
   const { token } = useAuth();
   const socketRef = useRef(null);
   const [connected, setConnected] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [onlineCount, setOnlineCount] = useState(0);
 
   useEffect(() => {
@@ -20,7 +21,16 @@ export function SocketProvider({ children }) {
       if (token) socket.emit('authenticate', token);
     });
 
-    socket.on('disconnect', () => setConnected(false));
+    // Mark authenticated only after server confirms — this is the gate
+    // that prevents join-room from firing before the async DB lookup is done
+    socket.on('authenticated', () => setIsAuthenticated(true));
+    socket.on('auth-error', () => setIsAuthenticated(false));
+
+    socket.on('disconnect', () => {
+      setConnected(false);
+      setIsAuthenticated(false);
+    });
+
     socket.on('online-count', setOnlineCount);
 
     return () => {
@@ -29,7 +39,7 @@ export function SocketProvider({ children }) {
   }, [token]);
 
   return (
-    <SocketContext.Provider value={{ socket: socketRef.current, connected, onlineCount }}>
+    <SocketContext.Provider value={{ socket: socketRef.current, connected, isAuthenticated, onlineCount }}>
       {children}
     </SocketContext.Provider>
   );

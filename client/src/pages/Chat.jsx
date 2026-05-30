@@ -13,7 +13,7 @@ const GENDERS = ['Male', 'Female', 'Non-binary', 'Prefer not to say'];
 
 export default function Chat() {
   const { user, logout } = useAuth();
-  const { socket, connected, onlineCount } = useSocket();
+  const { socket, connected, isAuthenticated, onlineCount } = useSocket();
 
   const [allUsers, setAllUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -76,10 +76,7 @@ export default function Chat() {
     socket.on('call-ended', handleCallEnded);
     socket.on('call-error', handleCallError);
 
-    socket.emit('join-room', GLOBAL_ROOM);
-
     return () => {
-      socket.emit('leave-room', GLOBAL_ROOM);
       socket.off('room-users', handleRoomUsers);
       socket.off('user-joined', handleUserJoined);
       socket.off('user-left', handleUserLeft);
@@ -91,6 +88,16 @@ export default function Chat() {
       socket.off('call-error', handleCallError);
     };
   }, [socket]);
+
+  // Join the global room only after the server has confirmed authentication.
+  // Previously join-room was fired immediately, racing against the async DB
+  // lookup in the authenticate handler — users appeared online but never
+  // entered the room so no one could see each other.
+  useEffect(() => {
+    if (!socket || !isAuthenticated) return;
+    socket.emit('join-room', GLOBAL_ROOM);
+    return () => socket.emit('leave-room', GLOBAL_ROOM);
+  }, [socket, isAuthenticated]);
 
   const filteredUsers = useMemo(() => {
     return allUsers
