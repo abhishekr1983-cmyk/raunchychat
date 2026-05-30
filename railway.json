@@ -5,7 +5,7 @@
     "buildCommand": "cd server && npm install && cd ../client && npm install && VITE_SOCKET_URL='' npm run build"
   },
   "deploy": {
-    "startCommand": "cd server && node index.js",
+    "startCommand": "node server/index.js",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 5
   }
