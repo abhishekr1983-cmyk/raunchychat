@@ -6,10 +6,17 @@ import IncomingCallModal from '../components/Call/IncomingCallModal';
 import VideoCall from '../components/Call/VideoCall';
 import { COUNTRIES } from '../data/countries';
 import { getStates } from '../data/countryStates';
+import { getFlag } from '../utils/flags';
 import ThemeSelector from '../components/ThemeSelector';
 
 const GLOBAL_ROOM = 1;
 const GENDERS = ['Male', 'Female', 'Non-binary', 'Prefer not to say'];
+
+function getAvatarColor(gender) {
+  if (gender === 'Female') return 'var(--avatar-female, #e91e8c)';
+  if (gender === 'Male') return 'var(--avatar-male, #1e88e5)';
+  return 'var(--accent)';
+}
 
 export default function Chat() {
   const { user, logout } = useAuth();
@@ -19,6 +26,8 @@ export default function Chat() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [unread, setUnread] = useState({});
   const [callState, setCallState] = useState(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [search, setSearch] = useState('');
 
   // Filters
   const [filterGender, setFilterGender] = useState('');
@@ -26,23 +35,19 @@ export default function Chat() {
   const [filterState, setFilterState] = useState('');
   const [filterAgeMin, setFilterAgeMin] = useState(18);
   const [filterAgeMax, setFilterAgeMax] = useState(99);
-
   const filterStates = getStates(filterCountry);
 
-  // Socket events
+  // Socket events — handlers
   useEffect(() => {
     if (!socket) return;
 
     const handleRoomUsers = (users) => setAllUsers(Array.isArray(users) ? users : []);
-
     const handleUserJoined = (u) =>
       setAllUsers((prev) => prev.find((p) => p.id === u.id) ? prev : [...prev, u]);
-
     const handleUserLeft = (u) => {
       setAllUsers((prev) => prev.filter((p) => p.id !== u.id));
       setSelectedUser((sel) => sel?.id === u.id ? null : sel);
     };
-
     const handleNewPrivateMessage = (msg) => {
       if (msg.sender_id !== user?.id) {
         setSelectedUser((sel) => {
@@ -53,15 +58,12 @@ export default function Chat() {
         });
       }
     };
-
     const handleIncomingCall = ({ callerId, callerName, callerGender, callType }) => {
       if (callState?.type === 'active') { socket.emit('call-rejected', { callerId }); return; }
       setCallState({ type: 'incoming', caller: { id: callerId, username: callerName, gender: callerGender, callType } });
     };
-
     const handleCallAccepted = ({ accepterId, accepterName, callType }) =>
       setCallState({ type: 'active', peer: { id: accepterId, username: accepterName }, callType, isInitiator: true });
-
     const handleCallRejected = ({ name }) => { setCallState(null); alert(`${name} declined the call.`); };
     const handleCallEnded = () => setCallState(null);
     const handleCallError = (msg) => { setCallState(null); alert(msg); };
@@ -89,10 +91,7 @@ export default function Chat() {
     };
   }, [socket]);
 
-  // Join the global room only after the server has confirmed authentication.
-  // Previously join-room was fired immediately, racing against the async DB
-  // lookup in the authenticate handler — users appeared online but never
-  // entered the room so no one could see each other.
+  // Join room only after server confirms auth (fixes async race condition)
   useEffect(() => {
     if (!socket || !isAuthenticated) return;
     socket.emit('join-room', GLOBAL_ROOM);
@@ -102,15 +101,16 @@ export default function Chat() {
   const filteredUsers = useMemo(() => {
     return allUsers
       .filter((u) => u.id !== user?.id)
+      .filter((u) => !search || u.username.toLowerCase().includes(search.toLowerCase()))
       .filter((u) => !filterGender || u.gender === filterGender)
       .filter((u) => !filterCountry || u.country === filterCountry)
       .filter((u) => !filterState || u.state === filterState)
       .filter((u) => u.age >= filterAgeMin && u.age <= filterAgeMax);
-  }, [allUsers, user, filterGender, filterCountry, filterState, filterAgeMin, filterAgeMax]);
+  }, [allUsers, user, search, filterGender, filterCountry, filterState, filterAgeMin, filterAgeMax]);
 
   const resetFilters = () => {
     setFilterGender(''); setFilterCountry(''); setFilterState('');
-    setFilterAgeMin(18); setFilterAgeMax(99);
+    setFilterAgeMin(18); setFilterAgeMax(99); setSearch('');
   };
 
   const openChat = useCallback((u) => {
@@ -141,17 +141,18 @@ export default function Chat() {
   const others = allUsers.filter((u) => u.id !== user?.id);
 
   return (
-    <div className={`chat-layout ${selectedUser ? 'chat-open' : ''}`}>
+    <div className="chat-layout">
 
-      {/* Top header */}
+      {/* ── Top header ── */}
       <header className="chat-header">
-        <div className="lobby-brand">
+        <div className="ch-brand">
           <span className="brand-logo">🔥</span>
           <span className="brand-name">RaunchyChat</span>
         </div>
-        <div className="chat-header-center">
+
+        <div className="ch-center">
           <span className={`status-dot ${connected ? 'online' : 'offline'}`} />
-          <span className="text-muted text-sm">{onlineCount} online</span>
+          <span className="ch-online">{onlineCount} online</span>
           {callState?.type === 'outgoing' && (
             <div className="calling-banner">
               📞 Calling {callState.peer.username}…
@@ -162,9 +163,12 @@ export default function Chat() {
             </div>
           )}
         </div>
-        <div className="lobby-header-right">
+
+        <div className="ch-right">
           <div className="user-chip">
-            <span className="user-avatar">{user?.username?.[0]?.toUpperCase()}</span>
+            <div className="user-avatar" style={{ background: getAvatarColor(user?.gender) }}>
+              {user?.username?.[0]?.toUpperCase()}
+            </div>
             <span className="user-name">{user?.username}</span>
             {user?.isGuest && <span className="guest-badge">Guest</span>}
           </div>
@@ -173,141 +177,147 @@ export default function Chat() {
         </div>
       </header>
 
-      {/* Filter sidebar */}
-      <aside className="filter-sidebar">
-        <div className="filter-title">
-          Filters
-          {hasFilters && (
-            <button className="link-btn filter-reset" onClick={resetFilters}>Reset</button>
-          )}
-        </div>
-
-        <div className="filter-section">
-          <div className="filter-label">Gender</div>
-          <div className="filter-chips">
-            <button
-              className={`chip ${!filterGender ? 'active' : ''}`}
-              onClick={() => setFilterGender('')}
-            >All</button>
-            {GENDERS.map((g) => (
-              <button
-                key={g}
-                className={`chip ${filterGender === g ? 'active' : ''}`}
-                onClick={() => setFilterGender(g === filterGender ? '' : g)}
-              >{g}</button>
-            ))}
-          </div>
-        </div>
-
-        <div className="filter-section">
-          <div className="filter-label">Country</div>
-          <select
-            className="filter-select"
-            value={filterCountry}
-            onChange={(e) => { setFilterCountry(e.target.value); setFilterState(''); }}
+      {/* ── Left: User list panel ── */}
+      <aside className="user-list-panel">
+        {/* Search + filter toggle */}
+        <div className="ulp-search-row">
+          <input
+            className="ulp-search"
+            placeholder="🔍  Search users…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <button
+            className={`ulp-filter-btn ${showFilters ? 'active' : ''} ${hasFilters ? 'has-dot' : ''}`}
+            onClick={() => setShowFilters((v) => !v)}
+            title="Filters"
           >
-            <option value="">Any country</option>
-            {COUNTRIES.map((c) => <option key={c}>{c}</option>)}
-          </select>
+            ⚙
+          </button>
         </div>
 
-        {filterCountry && (
-          <div className="filter-section">
-            <div className="filter-label">State / Province</div>
-            {filterStates ? (
-              <select
-                className="filter-select"
-                value={filterState}
-                onChange={(e) => setFilterState(e.target.value)}
-              >
-                <option value="">Any state</option>
-                {filterStates.map((s) => <option key={s}>{s}</option>)}
+        {/* Collapsible filter panel */}
+        {showFilters && (
+          <div className="ulp-filters">
+            <div className="ulf-row">
+              <label className="ulf-label">Gender</label>
+              <select className="ulf-select" value={filterGender}
+                onChange={(e) => setFilterGender(e.target.value)}>
+                <option value="">Any</option>
+                {GENDERS.map((g) => <option key={g}>{g}</option>)}
               </select>
-            ) : (
-              <input
-                className="filter-input"
-                placeholder="Any state"
-                value={filterState}
-                onChange={(e) => setFilterState(e.target.value)}
-              />
+            </div>
+            <div className="ulf-row">
+              <label className="ulf-label">Country</label>
+              <select className="ulf-select" value={filterCountry}
+                onChange={(e) => { setFilterCountry(e.target.value); setFilterState(''); }}>
+                <option value="">Any</option>
+                {COUNTRIES.map((c) => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+            {filterCountry && (
+              <div className="ulf-row">
+                <label className="ulf-label">State</label>
+                {filterStates ? (
+                  <select className="ulf-select" value={filterState}
+                    onChange={(e) => setFilterState(e.target.value)}>
+                    <option value="">Any</option>
+                    {filterStates.map((s) => <option key={s}>{s}</option>)}
+                  </select>
+                ) : (
+                  <input className="ulf-select" placeholder="Any"
+                    value={filterState} onChange={(e) => setFilterState(e.target.value)} />
+                )}
+              </div>
+            )}
+            <div className="ulf-row">
+              <label className="ulf-label">Age</label>
+              <div className="ulf-age">
+                <input type="number" className="ulf-age-input" value={filterAgeMin}
+                  min={18} max={filterAgeMax}
+                  onChange={(e) => setFilterAgeMin(Number(e.target.value))} />
+                <span>–</span>
+                <input type="number" className="ulf-age-input" value={filterAgeMax}
+                  min={filterAgeMin} max={99}
+                  onChange={(e) => setFilterAgeMax(Number(e.target.value))} />
+              </div>
+            </div>
+            {hasFilters && (
+              <button className="ulf-reset" onClick={resetFilters}>Reset filters</button>
             )}
           </div>
         )}
 
-        <div className="filter-section">
-          <div className="filter-label">Age Range</div>
-          <div className="age-range">
-            <input
-              type="number" className="filter-input age-input"
-              value={filterAgeMin} min={18} max={filterAgeMax}
-              onChange={(e) => setFilterAgeMin(Number(e.target.value))}
-            />
-            <span className="text-muted">–</span>
-            <input
-              type="number" className="filter-input age-input"
-              value={filterAgeMax} min={filterAgeMin} max={99}
-              onChange={(e) => setFilterAgeMax(Number(e.target.value))}
-            />
-          </div>
+        {/* Online count bar */}
+        <div className="ulp-count">
+          <span className="ulp-count-dot" />
+          ONLINE {onlineCount}
+          <span className="ulp-shown">· showing {filteredUsers.length}</span>
         </div>
 
-        <div className="filter-count">
-          {filteredUsers.length} of {others.length} shown
-        </div>
-      </aside>
-
-      {/* Main user grid */}
-      <main className="chat-main">
-        {filteredUsers.length === 0 ? (
-          <div className="room-empty">
-            <div className="room-empty-icon">{others.length === 0 ? '🌙' : '🔍'}</div>
-            <p>{others.length === 0 ? 'No one else is online yet.' : 'No users match your filters.'}</p>
-            {others.length > 0 && (
-              <button className="btn btn-ghost btn-sm" onClick={resetFilters}>Clear filters</button>
-            )}
-          </div>
-        ) : (
-          <div className="who-is-here">
-            {filteredUsers.map((u) => {
+        {/* User list */}
+        <div className="ulp-list">
+          {filteredUsers.length === 0 ? (
+            <div className="ulp-empty">
+              {others.length === 0 ? '🌙 No one online yet' : '🔍 No matches'}
+            </div>
+          ) : (
+            filteredUsers.map((u) => {
               const unreadCount = unread[u.id] || 0;
-              const isSelected = selectedUser?.id === u.id;
+              const isActive = selectedUser?.id === u.id;
               return (
                 <div
                   key={u.id}
-                  className={`user-card ${isSelected ? 'selected' : ''}`}
+                  className={`ulp-item ${isActive ? 'active' : ''}`}
                   onClick={() => openChat(u)}
                 >
-                  <div className="uc-avatar-wrap">
-                    <div className="uc-avatar">{u.username[0].toUpperCase()}</div>
-                    {unreadCount > 0 && <span className="uc-badge">{unreadCount}</span>}
+                  <div
+                    className="ulp-avatar"
+                    style={{ background: getAvatarColor(u.gender) }}
+                  >
+                    {u.username[0].toUpperCase()}
+                    <span className="ulp-online-ring" />
                   </div>
-                  <div className="uc-name">{u.username}</div>
-                  <div className="uc-meta">{u.age} · {u.gender}</div>
-                  <div className="uc-state">{u.state}, {u.country}</div>
-                  <div className="uc-actions" onClick={(e) => e.stopPropagation()}>
-                    <button className="uc-btn chat" title="Private chat" onClick={() => openChat(u)}>💬</button>
-                    <button className="uc-btn voice" title="Voice call" disabled={!!callState} onClick={() => initiateCall(u, 'voice')}>📞</button>
-                    <button className="uc-btn video" title="Video call" disabled={!!callState} onClick={() => initiateCall(u, 'video')}>📹</button>
+                  <div className="ulp-info">
+                    <div className="ulp-name">
+                      {u.username}
+                      {unreadCount > 0 && <span className="ulp-badge">{unreadCount}</span>}
+                    </div>
+                    <div className="ulp-meta">{u.age} Yrs, {u.state}, {u.country}</div>
                   </div>
+                  <span className="ulp-flag">{getFlag(u.country)}</span>
                 </div>
               );
-            })}
-          </div>
-        )}
-      </main>
+            })
+          )}
+        </div>
+      </aside>
 
-      {/* Private chat panel */}
-      {selectedUser && (
-        <aside className="private-chat-panel">
+      {/* ── Right: Chat main ── */}
+      <main className="chat-main">
+        {selectedUser ? (
           <PrivateChat
             peer={selectedUser}
             socket={socket}
             currentUser={user}
             onClose={() => setSelectedUser(null)}
+            onCall={initiateCall}
+            callState={callState}
           />
-        </aside>
-      )}
+        ) : (
+          <div className="chat-welcome">
+            <div className="cw-icon">💬</div>
+            <h2 className="cw-title">Start a Conversation</h2>
+            <p className="cw-sub">
+              {others.length === 0
+                ? 'Waiting for others to join…'
+                : `${others.length} ${others.length === 1 ? 'person' : 'people'} online — pick someone to chat with`}
+            </p>
+          </div>
+        )}
+      </main>
 
+      {/* ── Modals / overlays ── */}
       {callState?.type === 'incoming' && (
         <IncomingCallModal caller={callState.caller} onAccept={acceptCall} onReject={rejectCall} />
       )}
