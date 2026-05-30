@@ -3,18 +3,28 @@ import { createContext, useContext, useState, useCallback } from 'react';
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => localStorage.getItem('chat_token'));
+  // Guests use sessionStorage (cleared when tab/browser closes).
+  // Registered users use localStorage (persists across sessions).
+  const [token, setToken] = useState(() =>
+    sessionStorage.getItem('chat_token') || localStorage.getItem('chat_token')
+  );
   const [user, setUser] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem('chat_user'));
+      const raw = sessionStorage.getItem('chat_user') || localStorage.getItem('chat_user');
+      return JSON.parse(raw);
     } catch {
       return null;
     }
   });
 
   const login = useCallback((newToken, newUser) => {
-    localStorage.setItem('chat_token', newToken);
-    localStorage.setItem('chat_user', JSON.stringify(newUser));
+    if (newUser.isGuest) {
+      sessionStorage.setItem('chat_token', newToken);
+      sessionStorage.setItem('chat_user', JSON.stringify(newUser));
+    } else {
+      localStorage.setItem('chat_token', newToken);
+      localStorage.setItem('chat_user', JSON.stringify(newUser));
+    }
     setToken(newToken);
     setUser(newUser);
   }, []);
@@ -22,6 +32,8 @@ export function AuthProvider({ children }) {
   const logout = useCallback(() => {
     localStorage.removeItem('chat_token');
     localStorage.removeItem('chat_user');
+    sessionStorage.removeItem('chat_token');
+    sessionStorage.removeItem('chat_user');
     setToken(null);
     setUser(null);
   }, []);
