@@ -9,7 +9,6 @@ import { getStates } from '../data/countryStates';
 import { getFlag } from '../utils/flags';
 import ThemeSelector from '../components/ThemeSelector';
 
-const GLOBAL_ROOM = 1;
 const GENDERS = ['Male', 'Female', 'Non-binary', 'Prefer not to say'];
 
 function getAvatarColor(gender) {
@@ -20,7 +19,7 @@ function getAvatarColor(gender) {
 
 export default function Chat() {
   const { user, logout } = useAuth();
-  const { socket, connected, isAuthenticated, onlineCount } = useSocket();
+  const { socket, connected, onlineCount } = useSocket();
 
   const [allUsers, setAllUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -91,12 +90,8 @@ export default function Chat() {
     };
   }, [socket]);
 
-  // Join room only after server confirms auth (fixes async race condition)
-  useEffect(() => {
-    if (!socket || !isAuthenticated) return;
-    socket.emit('join-room', GLOBAL_ROOM);
-    return () => socket.emit('leave-room', GLOBAL_ROOM);
-  }, [socket, isAuthenticated]);
+  // Room join is now handled server-side inside the authenticate handler —
+  // no client-side join-room emission needed, which eliminates the race condition.
 
   const filteredUsers = useMemo(() => {
     return allUsers

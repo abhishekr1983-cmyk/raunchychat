@@ -6,6 +6,8 @@ const socketToUser = new Map(); // socketId -> user
 const userToSocket = new Map(); // userId -> socketId
 const roomUsers = new Map();    // roomId -> Map<userId, user>
 
+const GLOBAL_ROOM = 1; // single global room — everyone lands here on auth
+
 // Tracks consecutive unanswered messages: `${senderId}-${receiverId}` -> count
 const pendingCounts = new Map();
 
@@ -37,6 +39,7 @@ function setupSocketHandlers(io) {
           state: row.state,
           country: row.country,
           isGuest: row.is_guest === 1,
+          isAdmin: row.is_admin === 1,
         };
 
         const oldSock = userToSocket.get(user.id);
@@ -44,7 +47,21 @@ function setupSocketHandlers(io) {
 
         socketToUser.set(socket.id, user);
         userToSocket.set(user.id, socket.id);
-        console.log(`[auth] ✓ ${user.username} (id=${user.id}) — total online: ${userToSocket.size}`);
+
+        // ── Auto-join global room immediately after auth ──────────
+        // Do this BEFORE emitting 'authenticated' so the client's
+        // room-users handler fires in the same tick as auth confirmation,
+        // eliminating any client→server join-room round-trip race.
+        socket.join(`room:${GLOBAL_ROOM}`);
+        if (!roomUsers.has(GLOBAL_ROOM)) roomUsers.set(GLOBAL_ROOM, new Map());
+        roomUsers.get(GLOBAL_ROOM).set(user.id, user);
+        const usersInRoom = Array.from(roomUsers.get(GLOBAL_ROOM).values());
+        // Full list to everyone already in the room (including this user)
+        io.to(`room:${GLOBAL_ROOM}`).emit('room-users', usersInRoom);
+        // Single-user event to everyone ELSE (so their handleUserJoined fires)
+        socket.to(`room:${GLOBAL_ROOM}`).emit('user-joined', user);
+
+        console.log(`[auth] ✓ ${user.username} (id=${user.id}) joined room — ${usersInRoom.length} user(s): ${usersInRoom.map(u => u.username).join(', ')}`);
         socket.emit('authenticated', user);
         io.emit('online-count', userToSocket.size);
       } catch (e) {

@@ -4,7 +4,7 @@ const path = require('path');
 const { Server } = require('socket.io');
 const cors = require('cors');
 
-const { initDB } = require('./db');
+const { initDB, seedAdmin } = require('./db');
 const authRoutes = require('./routes/auth');
 const roomRoutes = require('./routes/rooms');
 const { setupSocketHandlers } = require('./socket/handlers');
@@ -33,6 +33,7 @@ setupSocketHandlers(io);
 const PORT = process.env.PORT || 3001;
 
 initDB()
+  .then(() => seedAdmin())
   .then(() => {
     server.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
   })
