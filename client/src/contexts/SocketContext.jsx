@@ -5,7 +5,7 @@ import { useAuth } from './AuthContext';
 const SocketContext = createContext(null);
 
 export function SocketProvider({ children }) {
-  const { token } = useAuth();
+  const { token, logout } = useAuth();
   const socketRef = useRef(null);
   const [connected, setConnected] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -21,10 +21,15 @@ export function SocketProvider({ children }) {
       if (token) socket.emit('authenticate', token);
     });
 
-    // Mark authenticated only after server confirms — this is the gate
-    // that prevents join-room from firing before the async DB lookup is done
+    // Server confirmed auth — now safe to join rooms
     socket.on('authenticated', () => setIsAuthenticated(true));
-    socket.on('auth-error', () => setIsAuthenticated(false));
+
+    // Bad/expired token → clear session so user is sent back to login
+    socket.on('auth-error', (msg) => {
+      console.warn('Auth error from server:', msg);
+      setIsAuthenticated(false);
+      logout(); // clears localStorage + sessionStorage, triggers redirect to /
+    });
 
     socket.on('disconnect', () => {
       setConnected(false);

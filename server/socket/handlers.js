@@ -14,6 +14,8 @@ function pendingKey(a, b) { return `${a}-${b}`; }
 function setupSocketHandlers(io) {
   io.on('connection', (socket) => {
 
+    console.log(`[socket] connect  ${socket.id}`);
+
     socket.on('authenticate', async (token) => {
       try {
         const { userId } = jwt.verify(token, JWT_SECRET);
@@ -22,7 +24,10 @@ function setupSocketHandlers(io) {
           args: [userId],
         })).rows[0];
 
-        if (!row) return socket.emit('auth-error', 'User not found');
+        if (!row) {
+          console.warn(`[auth] user ${userId} not found in DB → auth-error`);
+          return socket.emit('auth-error', 'User not found');
+        }
 
         const user = {
           id: Number(row.id),
@@ -39,9 +44,11 @@ function setupSocketHandlers(io) {
 
         socketToUser.set(socket.id, user);
         userToSocket.set(user.id, socket.id);
+        console.log(`[auth] ✓ ${user.username} (id=${user.id}) — total online: ${userToSocket.size}`);
         socket.emit('authenticated', user);
         io.emit('online-count', userToSocket.size);
-      } catch {
+      } catch (e) {
+        console.warn(`[auth] invalid token:`, e.message);
         socket.emit('auth-error', 'Invalid token');
       }
     });
@@ -50,13 +57,17 @@ function setupSocketHandlers(io) {
 
     socket.on('join-room', (roomId) => {
       const user = socketToUser.get(socket.id);
-      if (!user) return;
+      if (!user) {
+        console.warn(`[join-room] socket ${socket.id} not authenticated, ignoring`);
+        return;
+      }
 
       socket.join(`room:${roomId}`);
       if (!roomUsers.has(roomId)) roomUsers.set(roomId, new Map());
       roomUsers.get(roomId).set(user.id, user);
 
       const usersInRoom = Array.from(roomUsers.get(roomId).values());
+      console.log(`[join-room] ${user.username} joined room ${roomId} — ${usersInRoom.length} user(s): ${usersInRoom.map(u => u.username).join(', ')}`);
       io.to(`room:${roomId}`).emit('room-users', usersInRoom);
       socket.to(`room:${roomId}`).emit('user-joined', user);
     });
@@ -207,6 +218,7 @@ function setupSocketHandlers(io) {
     socket.on('disconnect', () => {
       const user = socketToUser.get(socket.id);
       if (!user) return;
+      console.log(`[socket] disconnect ${user.username} (id=${user.id})`);
       socketToUser.delete(socket.id);
       userToSocket.delete(user.id);
       roomUsers.forEach((users, roomId) => {
