@@ -63,6 +63,9 @@ router.post('/login', async (req, res) => {
     if (!row || !(await bcrypt.compare(password, row.password_hash)))
       return res.status(401).json({ error: 'Invalid credentials' });
 
+    if (row.is_blocked)
+      return res.status(403).json({ error: 'Your account has been blocked. Contact support.' });
+
     // Update last_seen on login
     await client.execute({
       sql: 'UPDATE users SET last_seen = ? WHERE id = ?',

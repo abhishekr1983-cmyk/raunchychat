@@ -1269,6 +1269,136 @@ a { color: var(--accent); text-decoration: none; }
   }
 }
 
+/* ── Word violation banner ─────────────────────────────────── */
+.pc-violation-banner {
+  background: rgba(245,158,11,0.12);
+  border: 1px solid rgba(245,158,11,0.4);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  color: #f59e0b;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.5;
+}
+.pc-violation-close {
+  background: none;
+  border: none;
+  color: #f59e0b;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-left: auto;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+.pc-violation-close:hover { opacity: 1; }
+
+/* ── Admin moderation / scripts extra styles ───────────────── */
+.admin-word-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-word-input {
+  flex: 1;
+  min-width: 200px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: var(--text);
+  font-size: 0.88rem;
+}
+.admin-word-input:focus { outline: none; border-color: var(--accent); }
+
+.admin-word-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.admin-word-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 3px 10px 3px 12px;
+  font-size: 0.8rem;
+  color: var(--text2);
+}
+
+.admin-word-chip-del {
+  background: none;
+  border: none;
+  color: var(--text3);
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 0;
+  transition: color 0.15s;
+}
+.admin-word-chip-del:hover { color: var(--danger); }
+
+.admin-threshold-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.admin-threshold-input {
+  width: 70px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  color: var(--text);
+  font-size: 0.9rem;
+  text-align: center;
+}
+.admin-threshold-input:focus { outline: none; border-color: var(--accent); }
+
+.admin-code-textarea {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-size: 0.83rem;
+  font-family: 'Menlo', 'Consolas', monospace;
+  resize: vertical;
+  min-height: 120px;
+}
+.admin-code-textarea:focus { outline: none; border-color: var(--accent); }
+
+/* Blocked badge in table */
+.admin-pill.blocked { background: rgba(239,68,68,0.15); color: var(--danger); }
+
+/* Violation badge */
+.admin-violation-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(245,158,11,0.15);
+  color: #f59e0b;
+  border-radius: 8px;
+  padding: 2px 6px;
+}
+
+/* Action buttons in table */
+.admin-action-btns {
+  display: flex;
+  gap: 4px;
+}
+
 /* ── Scrollbar ─────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

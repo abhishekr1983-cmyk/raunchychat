@@ -28,9 +28,48 @@ async function initDB() {
     'ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0',
     'ALTER TABLE users ADD COLUMN ip_address TEXT',
     'ALTER TABLE users ADD COLUMN last_seen DATETIME',
+    'ALTER TABLE users ADD COLUMN is_blocked INTEGER DEFAULT 0',
+    'ALTER TABLE users ADD COLUMN violation_count INTEGER DEFAULT 0',
   ];
   for (const sql of migrations) {
     try { await client.execute(sql); } catch { /* column already exists — fine */ }
+  }
+
+  // Blocked words table
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS blocked_words (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      word TEXT UNIQUE NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Violations / audit log
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS violations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      username TEXT NOT NULL,
+      matched_word TEXT NOT NULL,
+      message TEXT NOT NULL,
+      auto_blocked INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Seed default blocked words (violence / threats)
+  const defaultWords = [
+    'kill yourself', 'kys', 'go die', 'i will kill you', 'i will rape you',
+    'i will hurt you', 'bomb threat', 'shoot you', 'stab you',
+    'hang yourself', 'i will find you', 'you will die',
+  ];
+  for (const word of defaultWords) {
+    try {
+      await client.execute({
+        sql: 'INSERT INTO blocked_words (word) VALUES (?)',
+        args: [word],
+      });
+    } catch { /* already seeded */ }
   }
 
   await client.execute(`
@@ -71,6 +110,10 @@ async function initDB() {
     ['meta_description', 'Free adult chat rooms. Meet new people from around the world anonymously. No sign-up required.'],
     ['meta_keywords', 'adult chat, free chat, anonymous chat, meet people online'],
     ['default_theme', 'dark-seduction'],
+    ['ga_tracking_id', ''],
+    ['custom_head_code', ''],
+    ['custom_body_code', ''],
+    ['auto_block_threshold', '3'],
   ];
   for (const [key, value] of defaults) {
     try {

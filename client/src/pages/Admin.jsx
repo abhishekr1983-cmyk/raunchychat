@@ -20,63 +20,66 @@ function UsersTab({ token }) {
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [page, setPage] = useState(1);
-  const [data, setData] = useState(null); // { users, total, pages }
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
+  const [actionLoading, setActionLoading] = useState(null);
 
   const fetchUsers = useCallback(async () => {
-    setLoading(true);
-    setErr('');
+    setLoading(true); setErr('');
     try {
       const params = new URLSearchParams({ type: userType, page, limit: 50 });
       if (search) params.set('search', search);
-      const res = await fetch(`/api/admin/users?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(`/api/admin/users?${params}`, { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) throw new Error('Failed to load');
       setData(await res.json());
-    } catch (e) {
-      setErr(e.message);
-    }
+    } catch (e) { setErr(e.message); }
     setLoading(false);
   }, [userType, search, page, token]);
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
-
-  // Reset page when type/search changes
   useEffect(() => { setPage(1); }, [userType, search]);
 
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    setSearch(searchInput);
+  const handleSearchSubmit = (e) => { e.preventDefault(); setSearch(searchInput); };
+
+  const blockUser = async (userId, block) => {
+    setActionLoading(userId);
+    try {
+      await fetch(`/api/admin/users/${userId}/${block ? 'block' : 'unblock'}`, {
+        method: 'POST', headers: { Authorization: `Bearer ${token}` },
+      });
+      fetchUsers();
+    } catch { alert('Action failed'); }
+    setActionLoading(null);
+  };
+
+  const deleteUser = async (userId, username) => {
+    if (!confirm(`Delete user "${username}" permanently? This cannot be undone.`)) return;
+    setActionLoading(userId);
+    try {
+      await fetch(`/api/admin/users/${userId}`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
+      });
+      fetchUsers();
+    } catch { alert('Delete failed'); }
+    setActionLoading(null);
   };
 
   const isGuests = userType === 'guest';
 
   return (
-    <div className="admin-section" style={{ overflow: 'hidden' }}>
+    <div className="admin-section">
       <div className="admin-section-header">
-        <span className="admin-section-icon">{isGuests ? '👻' : '👤'}</span>
-        <span className="admin-section-title">
-          {isGuests ? 'Guest Users' : userType === 'all' ? 'All Users' : 'Registered Users'}
-        </span>
-        {data && (
-          <span style={{ marginLeft: 'auto', fontSize: '0.78rem', color: 'var(--text2)' }}>
-            {data.total} total
-          </span>
-        )}
+        <span className="admin-section-icon">👥</span>
+        <span className="admin-section-title">Users</span>
+        {data && <span style={{ marginLeft: 'auto', fontSize: '0.78rem', color: 'var(--text2)' }}>{data.total} total</span>}
       </div>
-
       <div className="admin-section-body">
-        {/* Toolbar */}
         <div className="admin-users-toolbar">
-          <select
-            className="admin-users-type"
-            value={userType}
-            onChange={(e) => setUserType(e.target.value)}
-          >
+          <select className="admin-users-type" value={userType} onChange={(e) => setUserType(e.target.value)}>
             <option value="registered">Registered</option>
             <option value="guest">Guests</option>
+            <option value="blocked">Blocked</option>
             <option value="all">All</option>
           </select>
           <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: 6, flex: 1 }}>
@@ -87,17 +90,12 @@ function UsersTab({ token }) {
               onChange={(e) => setSearchInput(e.target.value)}
             />
             <button type="submit" className="btn btn-primary btn-sm">Search</button>
-            {search && (
-              <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setSearch(''); setSearchInput(''); }}>
-                Clear
-              </button>
-            )}
+            {search && <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setSearch(''); setSearchInput(''); }}>Clear</button>}
           </form>
         </div>
 
         {err && <p className="form-error">{err}</p>}
 
-        {/* Table */}
         <div className="admin-table-wrap">
           <table className="admin-table">
             <thead>
@@ -110,19 +108,14 @@ function UsersTab({ token }) {
                 {isGuests && <th>IP Address</th>}
                 <th>Joined</th>
                 <th>Last Seen</th>
-                <th>Type</th>
+                <th>Status</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {loading && (
-                <tr className="admin-empty-row">
-                  <td colSpan={isGuests ? 8 : 8}>Loading…</td>
-                </tr>
-              )}
+              {loading && <tr className="admin-empty-row"><td colSpan={10}>Loading…</td></tr>}
               {!loading && data?.users.length === 0 && (
-                <tr className="admin-empty-row">
-                  <td colSpan={isGuests ? 8 : 8}>No users found</td>
-                </tr>
+                <tr className="admin-empty-row"><td colSpan={10}>No users found</td></tr>
               )}
               {!loading && data?.users.map((u) => (
                 <tr key={u.id}>
@@ -132,35 +125,48 @@ function UsersTab({ token }) {
                       {u.username}
                     </div>
                     <div className="admin-users-meta">#{u.id}</div>
+                    {u.violationCount > 0 && (
+                      <div className="admin-violation-badge" title="Violation count">⚠ {u.violationCount}</div>
+                    )}
                   </td>
-                  {!isGuests && (
-                    <td style={{ color: 'var(--text2)', fontSize: '0.82rem' }}>
-                      {u.email || '—'}
-                    </td>
-                  )}
+                  {!isGuests && <td style={{ color: 'var(--text2)', fontSize: '0.82rem' }}>{u.email || '—'}</td>}
                   <td>{u.gender}</td>
                   <td>{u.age}</td>
-                  <td style={{ fontSize: '0.82rem', color: 'var(--text2)' }}>
-                    {u.state}, {u.country}
-                  </td>
-                  {isGuests && (
-                    <td style={{ fontFamily: 'monospace', fontSize: '0.82rem', color: 'var(--text2)' }}>
-                      {u.ipAddress || '—'}
-                    </td>
-                  )}
-                  <td style={{ fontSize: '0.8rem', color: 'var(--text2)', whiteSpace: 'nowrap' }}>
-                    {formatDate(u.createdAt)}
-                  </td>
-                  <td style={{ fontSize: '0.8rem', color: 'var(--text2)', whiteSpace: 'nowrap' }}>
-                    {formatDate(u.lastSeen)}
-                  </td>
+                  <td style={{ fontSize: '0.82rem', color: 'var(--text2)' }}>{u.state}, {u.country}</td>
+                  {isGuests && <td style={{ fontFamily: 'monospace', fontSize: '0.82rem', color: 'var(--text2)' }}>{u.ipAddress || '—'}</td>}
+                  <td style={{ fontSize: '0.8rem', color: 'var(--text2)', whiteSpace: 'nowrap' }}>{formatDate(u.createdAt)}</td>
+                  <td style={{ fontSize: '0.8rem', color: 'var(--text2)', whiteSpace: 'nowrap' }}>{formatDate(u.lastSeen)}</td>
                   <td>
                     {u.isAdmin
                       ? <span className="admin-pill admin">Admin</span>
-                      : u.isGuest
-                        ? <span className="admin-pill guest">Guest</span>
-                        : <span className="admin-pill registered">Member</span>
-                    }
+                      : u.isBlocked
+                        ? <span className="admin-pill blocked">Blocked</span>
+                        : u.isGuest
+                          ? <span className="admin-pill guest">Guest</span>
+                          : <span className="admin-pill registered">Member</span>}
+                  </td>
+                  <td>
+                    {!u.isAdmin && (
+                      <div className="admin-action-btns">
+                        <button
+                          className={`btn btn-sm ${u.isBlocked ? 'btn-success' : 'btn-danger'}`}
+                          disabled={actionLoading === u.id}
+                          onClick={() => blockUser(u.id, !u.isBlocked)}
+                          title={u.isBlocked ? 'Unblock' : 'Block'}
+                        >
+                          {actionLoading === u.id ? '…' : u.isBlocked ? '✓ Unblock' : '🚫 Block'}
+                        </button>
+                        <button
+                          className="btn btn-sm btn-danger"
+                          disabled={actionLoading === u.id}
+                          onClick={() => deleteUser(u.id, u.username)}
+                          title="Delete user"
+                          style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--danger)' }}
+                        >
+                          🗑
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -168,27 +174,274 @@ function UsersTab({ token }) {
           </table>
         </div>
 
-        {/* Pagination */}
         {data && data.pages > 1 && (
           <div className="admin-users-pagination">
-            <span className="admin-users-page-info">
-              Page {page} of {data.pages} · {data.total} users
-            </span>
+            <span className="admin-users-page-info">Page {page} of {data.pages} · {data.total} users</span>
             <div className="admin-users-page-btns">
-              <button
-                className="btn btn-ghost btn-sm"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
-              >← Prev</button>
-              <button
-                className="btn btn-ghost btn-sm"
-                disabled={page >= data.pages}
-                onClick={() => setPage((p) => p + 1)}
-              >Next →</button>
+              <button className="btn btn-ghost btn-sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>← Prev</button>
+              <button className="btn btn-ghost btn-sm" disabled={page >= data.pages} onClick={() => setPage((p) => p + 1)}>Next →</button>
             </div>
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ── Moderation tab ─────────────────────────────────────────────
+function ModerationTab({ token, threshold, onThresholdSaved }) {
+  const [words, setWords] = useState([]);
+  const [newWord, setNewWord] = useState('');
+  const [wordErr, setWordErr] = useState('');
+  const [wordMsg, setWordMsg] = useState('');
+  const [thresholdInput, setThresholdInput] = useState(String(threshold));
+  const [thresholdMsg, setThresholdMsg] = useState('');
+  const [violations, setViolations] = useState(null);
+  const [vPage, setVPage] = useState(1);
+
+  const fetchWords = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/words', { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setWords(await res.json());
+    } catch { /* ignore */ }
+  }, [token]);
+
+  const fetchViolations = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/admin/violations?page=${vPage}&limit=30`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setViolations(await res.json());
+    } catch { /* ignore */ }
+  }, [token, vPage]);
+
+  useEffect(() => { fetchWords(); fetchViolations(); }, [fetchWords, fetchViolations]);
+  useEffect(() => { setThresholdInput(String(threshold)); }, [threshold]);
+
+  const addWord = async (e) => {
+    e.preventDefault();
+    setWordErr(''); setWordMsg('');
+    const w = newWord.trim().toLowerCase();
+    if (!w) return;
+    try {
+      const res = await fetch('/api/admin/words', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ word: w }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setWordErr(data.error); return; }
+      setNewWord('');
+      setWordMsg('Word added ✓');
+      setTimeout(() => setWordMsg(''), 2000);
+      fetchWords();
+    } catch { setWordErr('Failed to add'); }
+  };
+
+  const removeWord = async (id) => {
+    await fetch(`/api/admin/words/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    fetchWords();
+  };
+
+  const saveThreshold = async (e) => {
+    e.preventDefault();
+    const val = parseInt(thresholdInput);
+    if (!val || val < 1) return;
+    try {
+      await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ auto_block_threshold: String(val) }),
+      });
+      setThresholdMsg('Saved ✓');
+      onThresholdSaved(val);
+      setTimeout(() => setThresholdMsg(''), 2000);
+    } catch { setThresholdMsg('Failed'); }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* Auto-block threshold */}
+      <div className="admin-section">
+        <div className="admin-section-header">
+          <span className="admin-section-icon">⚙️</span>
+          <span className="admin-section-title">Auto-Block Settings</span>
+        </div>
+        <form className="admin-section-body" onSubmit={saveThreshold}>
+          <div className="admin-field">
+            <label>Auto-block after N violations</label>
+            <div className="admin-threshold-row">
+              <input
+                type="number" min={1} max={20}
+                className="admin-threshold-input"
+                value={thresholdInput}
+                onChange={(e) => setThresholdInput(e.target.value)}
+              />
+              <button type="submit" className="btn btn-primary btn-sm">Save</button>
+              {thresholdMsg && <span className="admin-save-msg">{thresholdMsg}</span>}
+            </div>
+            <span className="admin-field-hint">A user's account is automatically blocked after sending this many messages containing banned words.</span>
+          </div>
+        </form>
+      </div>
+
+      {/* Word list */}
+      <div className="admin-section">
+        <div className="admin-section-header">
+          <span className="admin-section-icon">🚫</span>
+          <span className="admin-section-title">Blocked Word List</span>
+          <span style={{ marginLeft: 'auto', fontSize: '0.78rem', color: 'var(--text2)' }}>{words.length} words</span>
+        </div>
+        <div className="admin-section-body">
+          <form onSubmit={addWord}>
+            <div className="admin-word-row">
+              <input
+                className="admin-word-input"
+                placeholder="Add word or phrase…"
+                value={newWord}
+                onChange={(e) => setNewWord(e.target.value)}
+                maxLength={100}
+              />
+              <button type="submit" className="btn btn-primary btn-sm">Add</button>
+              {wordMsg && <span className="admin-save-msg">{wordMsg}</span>}
+              {wordErr && <span className="admin-save-err">{wordErr}</span>}
+            </div>
+          </form>
+          <div className="admin-word-chips">
+            {words.map((w) => (
+              <span key={w.id} className="admin-word-chip">
+                {w.word}
+                <button className="admin-word-chip-del" onClick={() => removeWord(w.id)} title="Remove">✕</button>
+              </span>
+            ))}
+            {words.length === 0 && <span style={{ color: 'var(--text3)', fontSize: '0.85rem' }}>No blocked words yet</span>}
+          </div>
+        </div>
+      </div>
+
+      {/* Violations log */}
+      <div className="admin-section">
+        <div className="admin-section-header">
+          <span className="admin-section-icon">📋</span>
+          <span className="admin-section-title">Violations Log</span>
+          {violations && <span style={{ marginLeft: 'auto', fontSize: '0.78rem', color: 'var(--text2)' }}>{violations.total} total</span>}
+        </div>
+        <div className="admin-table-wrap">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Matched Word</th>
+                <th>Message</th>
+                <th>Auto-Blocked?</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {!violations && <tr className="admin-empty-row"><td colSpan={5}>Loading…</td></tr>}
+              {violations?.violations.length === 0 && <tr className="admin-empty-row"><td colSpan={5}>No violations recorded</td></tr>}
+              {violations?.violations.map((v) => (
+                <tr key={v.id}>
+                  <td style={{ fontWeight: 600 }}>{v.username} <span className="admin-users-meta">#{v.userId}</span></td>
+                  <td><span className="admin-word-chip" style={{ fontSize: '0.78rem' }}>{v.matchedWord}</span></td>
+                  <td style={{ fontSize: '0.8rem', color: 'var(--text2)', maxWidth: 260, wordBreak: 'break-word' }}>{v.message}</td>
+                  <td>{v.autoBlocked ? <span className="admin-pill blocked">Yes</span> : <span style={{ color: 'var(--text3)' }}>No</span>}</td>
+                  <td style={{ fontSize: '0.8rem', color: 'var(--text2)', whiteSpace: 'nowrap' }}>{formatDate(v.createdAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {violations && violations.pages > 1 && (
+          <div className="admin-users-pagination" style={{ padding: '12px 16px' }}>
+            <span className="admin-users-page-info">Page {vPage} of {violations.pages}</span>
+            <div className="admin-users-page-btns">
+              <button className="btn btn-ghost btn-sm" disabled={vPage <= 1} onClick={() => setVPage((p) => p - 1)}>← Prev</button>
+              <button className="btn btn-ghost btn-sm" disabled={vPage >= violations.pages} onClick={() => setVPage((p) => p + 1)}>Next →</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Scripts tab ────────────────────────────────────────────────
+function ScriptsTab({ token, settings, updateSettings }) {
+  const [form, setForm] = useState({
+    ga_tracking_id: settings.ga_tracking_id || '',
+    custom_head_code: settings.custom_head_code || '',
+    custom_body_code: settings.custom_body_code || '',
+  });
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+
+  useEffect(() => {
+    setForm({
+      ga_tracking_id: settings.ga_tracking_id || '',
+      custom_head_code: settings.custom_head_code || '',
+      custom_body_code: settings.custom_body_code || '',
+    });
+  }, [settings]);
+
+  const save = async (e) => {
+    e.preventDefault();
+    setMsg(''); setErr('');
+    try {
+      await updateSettings(form, token);
+      setMsg('Scripts saved ✓');
+      setTimeout(() => setMsg(''), 3000);
+    } catch (ex) { setErr(ex.message); }
+  };
+
+  return (
+    <div className="admin-section">
+      <div className="admin-section-header">
+        <span className="admin-section-icon">📡</span>
+        <span className="admin-section-title">Analytics & Custom Scripts</span>
+      </div>
+      <form className="admin-section-body" onSubmit={save}>
+        <div className="admin-field">
+          <label>Google Analytics 4 — Measurement ID</label>
+          <input
+            value={form.ga_tracking_id}
+            onChange={(e) => setForm((p) => ({ ...p, ga_tracking_id: e.target.value }))}
+            placeholder="G-XXXXXXXXXX"
+            maxLength={30}
+          />
+          <span className="admin-field-hint">
+            Paste your GA4 Measurement ID (e.g. <code>G-ABC123XYZ</code>). Leave blank to disable. The gtag script is injected automatically.
+          </span>
+        </div>
+
+        <div className="admin-field">
+          <label>Custom &lt;head&gt; Code</label>
+          <textarea
+            className="admin-code-textarea"
+            value={form.custom_head_code}
+            onChange={(e) => setForm((p) => ({ ...p, custom_head_code: e.target.value }))}
+            placeholder={'<!-- e.g. Meta Pixel, Hotjar, custom <meta> tags -->\n<script>\n  // your code here\n</script>'}
+            rows={6}
+          />
+          <span className="admin-field-hint">Injected into <code>&lt;head&gt;</code>. Supports any HTML including <code>&lt;script&gt;</code> tags.</span>
+        </div>
+
+        <div className="admin-field">
+          <label>Custom &lt;body&gt; Code</label>
+          <textarea
+            className="admin-code-textarea"
+            value={form.custom_body_code}
+            onChange={(e) => setForm((p) => ({ ...p, custom_body_code: e.target.value }))}
+            placeholder={'<!-- e.g. live chat widget, Tawk.to, Intercom -->\n<script>\n  // your code here\n</script>'}
+            rows={6}
+          />
+          <span className="admin-field-hint">Injected into <code>&lt;body&gt;</code> end. Good for chat widgets or tracking pixels.</span>
+        </div>
+
+        <div className="admin-save-row">
+          <button type="submit" className="btn btn-primary">Save Scripts</button>
+          {msg && <span className="admin-save-msg">{msg}</span>}
+          {err && <span className="admin-save-err">{err}</span>}
+        </div>
+      </form>
     </div>
   );
 }
@@ -204,87 +457,60 @@ export default function Admin() {
   const [stats, setStats] = useState(null);
   const [statsErr, setStatsErr] = useState('');
 
-  // Branding form
   const [brandForm, setBrandForm] = useState({ site_name: '', site_logo: '', site_tagline: '' });
-  const [brandMsg, setBrandMsg] = useState('');
-  const [brandErr, setBrandErr] = useState('');
+  const [brandMsg, setBrandMsg] = useState(''); const [brandErr, setBrandErr] = useState('');
 
-  // SEO form
   const [seoForm, setSeoForm] = useState({ meta_title: '', meta_description: '', meta_keywords: '' });
-  const [seoMsg, setSeoMsg] = useState('');
-  const [seoErr, setSeoErr] = useState('');
+  const [seoMsg, setSeoMsg] = useState(''); const [seoErr, setSeoErr] = useState('');
 
-  // Theme default
   const [themeForm, setThemeForm] = useState({ default_theme: '' });
   const [themeMsg, setThemeMsg] = useState('');
 
-  // Redirect if not admin
-  useEffect(() => {
-    if (user && !user.isAdmin) navigate('/chat', { replace: true });
-  }, [user]);
+  const [autoBlockThreshold, setAutoBlockThreshold] = useState(
+    parseInt(settings.auto_block_threshold) || 3
+  );
 
-  // Populate forms from settings once loaded
+  useEffect(() => { if (user && !user.isAdmin) navigate('/chat', { replace: true }); }, [user]);
+
   useEffect(() => {
-    setBrandForm({
-      site_name: settings.site_name || '',
-      site_logo: settings.site_logo || '',
-      site_tagline: settings.site_tagline || '',
-    });
-    setSeoForm({
-      meta_title: settings.meta_title || '',
-      meta_description: settings.meta_description || '',
-      meta_keywords: settings.meta_keywords || '',
-    });
+    setBrandForm({ site_name: settings.site_name || '', site_logo: settings.site_logo || '', site_tagline: settings.site_tagline || '' });
+    setSeoForm({ meta_title: settings.meta_title || '', meta_description: settings.meta_description || '', meta_keywords: settings.meta_keywords || '' });
     setThemeForm({ default_theme: settings.default_theme || 'dark-seduction' });
+    setAutoBlockThreshold(parseInt(settings.auto_block_threshold) || 3);
   }, [settings]);
 
-  // Fetch stats when tab = stats
   useEffect(() => {
     if (tab !== 'stats') return;
     fetch('/api/admin/stats', { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => r.json())
-      .then(setStats)
-      .catch(() => setStatsErr('Failed to load stats'));
+      .then((r) => r.json()).then(setStats).catch(() => setStatsErr('Failed to load stats'));
   }, [tab, token]);
 
   const handleBrand = async (e) => {
-    e.preventDefault();
-    setBrandMsg(''); setBrandErr('');
-    try {
-      await updateSettings(brandForm, token);
-      setBrandMsg('Branding saved ✓');
-      setTimeout(() => setBrandMsg(''), 3000);
-    } catch (err) { setBrandErr(err.message); }
+    e.preventDefault(); setBrandMsg(''); setBrandErr('');
+    try { await updateSettings(brandForm, token); setBrandMsg('Branding saved ✓'); setTimeout(() => setBrandMsg(''), 3000); }
+    catch (ex) { setBrandErr(ex.message); }
   };
-
   const handleSeo = async (e) => {
-    e.preventDefault();
-    setSeoMsg(''); setSeoErr('');
-    try {
-      await updateSettings(seoForm, token);
-      setSeoMsg('SEO settings saved ✓');
-      setTimeout(() => setSeoMsg(''), 3000);
-    } catch (err) { setSeoErr(err.message); }
+    e.preventDefault(); setSeoMsg(''); setSeoErr('');
+    try { await updateSettings(seoForm, token); setSeoMsg('SEO settings saved ✓'); setTimeout(() => setSeoMsg(''), 3000); }
+    catch (ex) { setSeoErr(ex.message); }
   };
-
   const handleTheme = async (e) => {
-    e.preventDefault();
-    setThemeMsg('');
-    try {
-      await updateSettings(themeForm, token);
-      setThemeMsg('Default theme saved ✓');
-      setTimeout(() => setThemeMsg(''), 3000);
-    } catch { setThemeMsg('Failed to save'); }
+    e.preventDefault(); setThemeMsg('');
+    try { await updateSettings(themeForm, token); setThemeMsg('Default theme saved ✓'); setTimeout(() => setThemeMsg(''), 3000); }
+    catch { setThemeMsg('Failed to save'); }
   };
 
   if (!user?.isAdmin) return null;
 
   const TABS = [
-    { key: 'stats',    label: '📊 Stats' },
-    { key: 'users',    label: '👥 Users' },
-    { key: 'branding', label: '🎨 Branding' },
-    { key: 'seo',      label: '🔍 SEO' },
-    { key: 'theme',    label: '✨ Theme' },
+    { key: 'stats',      label: '📊 Stats' },
+    { key: 'users',      label: '👥 Users' },
+    { key: 'moderation', label: '🛡️ Moderation' },
+    { key: 'scripts',    label: '📡 Scripts' },
+    { key: 'branding',   label: '🎨 Branding' },
+    { key: 'seo',        label: '🔍 SEO' },
+    { key: 'theme',      label: '✨ Theme' },
   ];
 
   return (
@@ -304,92 +530,65 @@ export default function Admin() {
 
       <nav className="admin-tabs">
         {TABS.map(({ key, label }) => (
-          <button
-            key={key}
-            className={`admin-tab ${tab === key ? 'active' : ''}`}
-            onClick={() => setTab(key)}
-          >
-            {label}
-          </button>
+          <button key={key} className={`admin-tab ${tab === key ? 'active' : ''}`} onClick={() => setTab(key)}>{label}</button>
         ))}
       </nav>
 
       <div className="admin-body">
 
-        {/* ── Stats ── */}
+        {/* Stats */}
         {tab === 'stats' && (
           <>
             <div className="admin-stats">
-              <div className="admin-stat-card">
-                <div className="admin-stat-icon">🟢</div>
-                <div className="admin-stat-value">{onlineCount}</div>
-                <div className="admin-stat-label">Online Now</div>
-              </div>
-              <div className="admin-stat-card">
-                <div className="admin-stat-icon">👤</div>
-                <div className="admin-stat-value">{stats ? stats.totalUsers : '…'}</div>
-                <div className="admin-stat-label">Total Users</div>
-              </div>
-              <div className="admin-stat-card">
-                <div className="admin-stat-icon">📝</div>
-                <div className="admin-stat-value">{stats ? stats.registeredUsers : '…'}</div>
-                <div className="admin-stat-label">Registered</div>
-              </div>
-              <div className="admin-stat-card">
-                <div className="admin-stat-icon">👻</div>
-                <div className="admin-stat-value">{stats ? stats.guestUsers : '…'}</div>
-                <div className="admin-stat-label">Guests</div>
-              </div>
-              <div className="admin-stat-card">
-                <div className="admin-stat-icon">💬</div>
-                <div className="admin-stat-value">{stats ? stats.totalMessages : '…'}</div>
-                <div className="admin-stat-label">Messages Sent</div>
-              </div>
+              {[
+                { icon: '🟢', value: onlineCount,               label: 'Online Now' },
+                { icon: '👤', value: stats?.totalUsers,         label: 'Total Users' },
+                { icon: '📝', value: stats?.registeredUsers,    label: 'Registered' },
+                { icon: '👻', value: stats?.guestUsers,         label: 'Guests' },
+                { icon: '💬', value: stats?.totalMessages,      label: 'Messages Sent' },
+                { icon: '🚫', value: stats?.blockedUsers,       label: 'Blocked' },
+              ].map(({ icon, value, label }) => (
+                <div key={label} className="admin-stat-card">
+                  <div className="admin-stat-icon">{icon}</div>
+                  <div className="admin-stat-value">{value ?? '…'}</div>
+                  <div className="admin-stat-label">{label}</div>
+                </div>
+              ))}
             </div>
             {statsErr && <p className="form-error">{statsErr}</p>}
           </>
         )}
 
-        {/* ── Users ── */}
+        {/* Users */}
         {tab === 'users' && <UsersTab token={token} />}
 
-        {/* ── Branding ── */}
+        {/* Moderation */}
+        {tab === 'moderation' && (
+          <ModerationTab token={token} threshold={autoBlockThreshold} onThresholdSaved={setAutoBlockThreshold} />
+        )}
+
+        {/* Scripts */}
+        {tab === 'scripts' && <ScriptsTab token={token} settings={settings} updateSettings={updateSettings} />}
+
+        {/* Branding */}
         {tab === 'branding' && (
           <div className="admin-section">
-            <div className="admin-section-header">
-              <span className="admin-section-icon">🎨</span>
-              <span className="admin-section-title">Branding & Identity</span>
-            </div>
+            <div className="admin-section-header"><span className="admin-section-icon">🎨</span><span className="admin-section-title">Branding & Identity</span></div>
             <form className="admin-section-body" onSubmit={handleBrand}>
               <div className="admin-fields-row">
                 <div className="admin-field">
                   <label>Site Name</label>
-                  <input
-                    value={brandForm.site_name}
-                    onChange={(e) => setBrandForm((p) => ({ ...p, site_name: e.target.value }))}
-                    placeholder="RaunchyChat"
-                    maxLength={60}
-                  />
+                  <input value={brandForm.site_name} onChange={(e) => setBrandForm((p) => ({ ...p, site_name: e.target.value }))} placeholder="RaunchyChat" maxLength={60} />
                 </div>
                 <div className="admin-field">
                   <label>Logo Emoji</label>
-                  <input
-                    value={brandForm.site_logo}
-                    onChange={(e) => setBrandForm((p) => ({ ...p, site_logo: e.target.value }))}
-                    placeholder="🔥"
-                    maxLength={10}
-                  />
+                  <input value={brandForm.site_logo} onChange={(e) => setBrandForm((p) => ({ ...p, site_logo: e.target.value }))} placeholder="🔥" maxLength={10} />
                   <span className="admin-field-hint">Paste any emoji or symbol</span>
                 </div>
               </div>
               <div className="admin-field">
                 <label>Tagline</label>
-                <input
-                  value={brandForm.site_tagline}
-                  onChange={(e) => setBrandForm((p) => ({ ...p, site_tagline: e.target.value }))}
-                  placeholder="Meet. Flirt. Connect."
-                  maxLength={120}
-                />
+                <input value={brandForm.site_tagline} onChange={(e) => setBrandForm((p) => ({ ...p, site_tagline: e.target.value }))} placeholder="Meet. Flirt. Connect." maxLength={120} />
               </div>
               <div className="admin-save-row">
                 <button type="submit" className="btn btn-primary">Save Branding</button>
@@ -400,42 +599,24 @@ export default function Admin() {
           </div>
         )}
 
-        {/* ── SEO ── */}
+        {/* SEO */}
         {tab === 'seo' && (
           <div className="admin-section">
-            <div className="admin-section-header">
-              <span className="admin-section-icon">🔍</span>
-              <span className="admin-section-title">SEO & Meta Tags</span>
-            </div>
+            <div className="admin-section-header"><span className="admin-section-icon">🔍</span><span className="admin-section-title">SEO & Meta Tags</span></div>
             <form className="admin-section-body" onSubmit={handleSeo}>
               <div className="admin-field">
-                <label>Page Title (browser tab + Google)</label>
-                <input
-                  value={seoForm.meta_title}
-                  onChange={(e) => setSeoForm((p) => ({ ...p, meta_title: e.target.value }))}
-                  placeholder="RaunchyChat — Meet & Chat Online"
-                  maxLength={120}
-                />
+                <label>Page Title</label>
+                <input value={seoForm.meta_title} onChange={(e) => setSeoForm((p) => ({ ...p, meta_title: e.target.value }))} placeholder="RaunchyChat — Meet & Chat Online" maxLength={120} />
                 <span className="admin-field-hint">Recommended: 50–60 characters</span>
               </div>
               <div className="admin-field">
                 <label>Meta Description</label>
-                <textarea
-                  value={seoForm.meta_description}
-                  onChange={(e) => setSeoForm((p) => ({ ...p, meta_description: e.target.value }))}
-                  placeholder="Free adult chat rooms. Meet new people anonymously."
-                  maxLength={300}
-                />
+                <textarea value={seoForm.meta_description} onChange={(e) => setSeoForm((p) => ({ ...p, meta_description: e.target.value }))} placeholder="Free adult chat rooms." maxLength={300} />
                 <span className="admin-field-hint">Recommended: 150–160 characters</span>
               </div>
               <div className="admin-field">
                 <label>Keywords (comma-separated)</label>
-                <input
-                  value={seoForm.meta_keywords}
-                  onChange={(e) => setSeoForm((p) => ({ ...p, meta_keywords: e.target.value }))}
-                  placeholder="adult chat, free chat, anonymous chat"
-                  maxLength={300}
-                />
+                <input value={seoForm.meta_keywords} onChange={(e) => setSeoForm((p) => ({ ...p, meta_keywords: e.target.value }))} placeholder="adult chat, free chat" maxLength={300} />
               </div>
               <div className="admin-save-row">
                 <button type="submit" className="btn btn-primary">Save SEO</button>
@@ -446,20 +627,14 @@ export default function Admin() {
           </div>
         )}
 
-        {/* ── Theme ── */}
+        {/* Theme */}
         {tab === 'theme' && (
           <div className="admin-section">
-            <div className="admin-section-header">
-              <span className="admin-section-icon">✨</span>
-              <span className="admin-section-title">Default Theme for New Users</span>
-            </div>
+            <div className="admin-section-header"><span className="admin-section-icon">✨</span><span className="admin-section-title">Default Theme for New Users</span></div>
             <form className="admin-section-body" onSubmit={handleTheme}>
               <div className="admin-field">
                 <label>Default Theme</label>
-                <select
-                  value={themeForm.default_theme}
-                  onChange={(e) => setThemeForm({ default_theme: e.target.value })}
-                >
+                <select value={themeForm.default_theme} onChange={(e) => setThemeForm({ default_theme: e.target.value })}>
                   {Object.entries(THEMES).map(([key, { name, emoji }]) => (
                     <option key={key} value={key}>{emoji} {name}</option>
                   ))}
@@ -473,6 +648,7 @@ export default function Admin() {
             </form>
           </div>
         )}
+
       </div>
     </div>
   );

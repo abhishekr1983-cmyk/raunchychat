@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { getFlag } from '../../utils/flags';
+import { useSocket } from '../../contexts/SocketContext';
 
 const MAX_PENDING = 3;
 
@@ -19,6 +20,7 @@ export default function PrivateChat({ peer, socket, currentUser, onClose, onCall
   const [text, setText] = useState('');
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
+  const { wordViolation, clearWordViolation } = useSocket();
 
   const remaining = MAX_PENDING - pendingCount;
   const isBlocked = pendingCount >= MAX_PENDING;
@@ -166,6 +168,13 @@ export default function PrivateChat({ peer, socket, currentUser, onClose, onCall
 
       {/* ── Footer / input ── */}
       <div className="pc-footer">
+        {wordViolation && (
+          <div className="pc-violation-banner">
+            ⚠️ Message blocked — your message contained a prohibited word (<strong>{wordViolation.matched}</strong>).
+            {' '}{wordViolation.remaining} warning{wordViolation.remaining !== 1 ? 's' : ''} left before your account is suspended.
+            <button className="pc-violation-close" onClick={clearWordViolation}>✕</button>
+          </div>
+        )}
         {isBlocked ? (
           <div className="pc-blocked">
             ⏳ You've sent 3 messages. Wait for <strong>{peer.username}</strong> to reply.

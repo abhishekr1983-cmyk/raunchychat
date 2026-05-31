@@ -10,6 +10,7 @@ export function SocketProvider({ children }) {
   const [connected, setConnected] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [onlineCount, setOnlineCount] = useState(0);
+  const [wordViolation, setWordViolation] = useState(null); // { matched, violationCount, threshold, remaining }
 
   useEffect(() => {
     const url = import.meta.env.VITE_SOCKET_URL ?? 'http://localhost:3001';
@@ -21,14 +22,27 @@ export function SocketProvider({ children }) {
       if (token) socket.emit('authenticate', token);
     });
 
-    // Server confirmed auth — now safe to join rooms
     socket.on('authenticated', () => setIsAuthenticated(true));
 
-    // Bad/expired token → clear session so user is sent back to login
+    // Bad/expired token or blocked → clear session
     socket.on('auth-error', (msg) => {
       console.warn('Auth error from server:', msg);
       setIsAuthenticated(false);
-      logout(); // clears localStorage + sessionStorage, triggers redirect to /
+      logout();
+    });
+
+    // Admin blocked this account mid-session or auto-blocked by word filter
+    socket.on('account-blocked', ({ reason }) => {
+      setIsAuthenticated(false);
+      alert(`🚫 ${reason}\n\nYou have been signed out.`);
+      logout();
+    });
+
+    // Word filter warning (message blocked but account not yet blocked)
+    socket.on('word-violation', (data) => {
+      setWordViolation(data);
+      // Auto-clear after 8 seconds
+      setTimeout(() => setWordViolation(null), 8000);
     });
 
     socket.on('disconnect', () => {
@@ -38,13 +52,20 @@ export function SocketProvider({ children }) {
 
     socket.on('online-count', setOnlineCount);
 
-    return () => {
-      socket.disconnect();
-    };
+    return () => { socket.disconnect(); };
   }, [token]);
 
+  const clearWordViolation = () => setWordViolation(null);
+
   return (
-    <SocketContext.Provider value={{ socket: socketRef.current, connected, isAuthenticated, onlineCount }}>
+    <SocketContext.Provider value={{
+      socket: socketRef.current,
+      connected,
+      isAuthenticated,
+      onlineCount,
+      wordViolation,
+      clearWordViolation,
+    }}>
       {children}
     </SocketContext.Provider>
   );

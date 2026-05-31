@@ -8,7 +8,7 @@ const { initDB, seedAdmin } = require('./db');
 const authRoutes = require('./routes/auth');
 const roomRoutes = require('./routes/rooms');
 const adminRoutes = require('./routes/admin');
-const { setupSocketHandlers } = require('./socket/handlers');
+const { setupSocketHandlers, refreshBlockedWords } = require('./socket/handlers');
 
 const app = express();
 const server = http.createServer(app);
@@ -37,6 +37,7 @@ const PORT = process.env.PORT || 3001;
 
 initDB()
   .then(() => seedAdmin())
+  .then(() => refreshBlockedWords()) // warm word-filter cache after tables exist
   .then(() => {
     server.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
   })

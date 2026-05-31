@@ -6,14 +6,62 @@ const socketToUser = new Map(); // socketId -> user
 const userToSocket = new Map(); // userId -> socketId
 const roomUsers = new Map();    // roomId -> Map<userId, user>
 
-const GLOBAL_ROOM = 1; // single global room — everyone lands here on auth
+const GLOBAL_ROOM = 1;
 
 // Tracks consecutive unanswered messages: `${senderId}-${receiverId}` -> count
 const pendingCounts = new Map();
 
 function pendingKey(a, b) { return `${a}-${b}`; }
 
+// ── Word filter ────────────────────────────────────────────────
+let blockedWordsCache = new Set();
+let autoBlockThreshold = 3;
+
+async function loadBlockedWords() {
+  try {
+    const result = await client.execute('SELECT word FROM blocked_words');
+    blockedWordsCache = new Set(result.rows.map((r) => r.word.toLowerCase()));
+    const setting = (await client.execute({
+      sql: "SELECT value FROM site_settings WHERE key = 'auto_block_threshold'",
+      args: [],
+    })).rows[0];
+    if (setting) autoBlockThreshold = Math.max(1, parseInt(setting.value) || 3);
+    console.log(`[words] ${blockedWordsCache.size} blocked words loaded, threshold=${autoBlockThreshold}`);
+  } catch (e) {
+    console.warn('[words] Failed to load blocked words:', e.message);
+  }
+}
+
+// Refresh called by admin routes when list changes
+async function refreshBlockedWords() { await loadBlockedWords(); }
+
+function matchBlockedWord(text) {
+  const lower = text.toLowerCase();
+  for (const word of blockedWordsCache) {
+    if (lower.includes(word)) return word;
+  }
+  return null;
+}
+
+// ── Kick a user by userId (called from admin routes) ──────────
+let _io = null;
+
+function kickUser(userId, reason = 'Your account has been blocked by an administrator.') {
+  if (!_io) return;
+  const socketId = userToSocket.get(Number(userId));
+  if (!socketId) return;
+  const sock = _io.sockets.sockets.get(socketId);
+  if (sock) {
+    sock.emit('account-blocked', { reason });
+    setTimeout(() => sock.disconnect(true), 600);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
 function setupSocketHandlers(io) {
+  _io = io;
+  // loadBlockedWords() is called from server/index.js after initDB() completes
+
   io.on('connection', (socket) => {
 
     console.log(`[socket] connect  ${socket.id}`);
@@ -27,8 +75,14 @@ function setupSocketHandlers(io) {
         })).rows[0];
 
         if (!row) {
-          console.warn(`[auth] user ${userId} not found in DB → auth-error`);
+          console.warn(`[auth] user ${userId} not found → auth-error`);
           return socket.emit('auth-error', 'User not found');
+        }
+
+        // Reject blocked accounts
+        if (row.is_blocked) {
+          console.warn(`[auth] blocked user ${row.username} attempted to connect`);
+          return socket.emit('auth-error', 'Your account has been blocked.');
         }
 
         const user = {
@@ -48,20 +102,14 @@ function setupSocketHandlers(io) {
         socketToUser.set(socket.id, user);
         userToSocket.set(user.id, socket.id);
 
-        // ── Auto-join global room immediately after auth ──────────
-        // Do this BEFORE emitting 'authenticated' so the client's
-        // room-users handler fires in the same tick as auth confirmation,
-        // eliminating any client→server join-room round-trip race.
         socket.join(`room:${GLOBAL_ROOM}`);
         if (!roomUsers.has(GLOBAL_ROOM)) roomUsers.set(GLOBAL_ROOM, new Map());
         roomUsers.get(GLOBAL_ROOM).set(user.id, user);
         const usersInRoom = Array.from(roomUsers.get(GLOBAL_ROOM).values());
-        // Full list to everyone already in the room (including this user)
         io.to(`room:${GLOBAL_ROOM}`).emit('room-users', usersInRoom);
-        // Single-user event to everyone ELSE (so their handleUserJoined fires)
         socket.to(`room:${GLOBAL_ROOM}`).emit('user-joined', user);
 
-        console.log(`[auth] ✓ ${user.username} (id=${user.id}) joined room — ${usersInRoom.length} user(s): ${usersInRoom.map(u => u.username).join(', ')}`);
+        console.log(`[auth] ✓ ${user.username} (id=${user.id}) — ${usersInRoom.length} user(s)`);
         socket.emit('authenticated', user);
         io.emit('online-count', userToSocket.size);
       } catch (e) {
@@ -70,21 +118,15 @@ function setupSocketHandlers(io) {
       }
     });
 
-    // ── Room presence (no chat, presence only) ──────────────────
+    // ── Room presence ──────────────────────────────────────────
 
     socket.on('join-room', (roomId) => {
       const user = socketToUser.get(socket.id);
-      if (!user) {
-        console.warn(`[join-room] socket ${socket.id} not authenticated, ignoring`);
-        return;
-      }
-
+      if (!user) return;
       socket.join(`room:${roomId}`);
       if (!roomUsers.has(roomId)) roomUsers.set(roomId, new Map());
       roomUsers.get(roomId).set(user.id, user);
-
       const usersInRoom = Array.from(roomUsers.get(roomId).values());
-      console.log(`[join-room] ${user.username} joined room ${roomId} — ${usersInRoom.length} user(s): ${usersInRoom.map(u => u.username).join(', ')}`);
       io.to(`room:${roomId}`).emit('room-users', usersInRoom);
       socket.to(`room:${roomId}`).emit('user-joined', user);
     });
@@ -92,7 +134,6 @@ function setupSocketHandlers(io) {
     socket.on('leave-room', (roomId) => {
       const user = socketToUser.get(socket.id);
       if (!user) return;
-
       socket.leave(`room:${roomId}`);
       if (roomUsers.has(roomId)) {
         roomUsers.get(roomId).delete(user.id);
@@ -101,7 +142,7 @@ function setupSocketHandlers(io) {
       socket.to(`room:${roomId}`).emit('user-left', user);
     });
 
-    // ── Private messaging ───────────────────────────────────────
+    // ── Private messaging ──────────────────────────────────────
 
     socket.on('open-conversation', async ({ withUserId }) => {
       const user = socketToUser.get(socket.id);
@@ -122,7 +163,6 @@ function setupSocketHandlers(io) {
       });
 
       const myPending = pendingCounts.get(pendingKey(user.id, withUserId)) || 0;
-
       socket.emit('conversation-history', {
         withUserId,
         messages: result.rows,
@@ -134,23 +174,77 @@ function setupSocketHandlers(io) {
       const sender = socketToUser.get(socket.id);
       if (!sender || !content?.trim()) return;
 
+      // Check if sender account is blocked in DB (could have been blocked mid-session)
+      const senderRow = (await client.execute({
+        sql: 'SELECT is_blocked, violation_count FROM users WHERE id = ?',
+        args: [sender.id],
+      })).rows[0];
+
+      if (senderRow?.is_blocked) {
+        socket.emit('account-blocked', { reason: 'Your account has been blocked.' });
+        return;
+      }
+
+      // ── Word filter ──────────────────────────────────────────
+      const trimmed = content.trim();
+      const matched = matchBlockedWord(trimmed);
+      if (matched) {
+        // Increment violation count
+        await client.execute({
+          sql: 'UPDATE users SET violation_count = violation_count + 1 WHERE id = ?',
+          args: [sender.id],
+        });
+        const updatedRow = (await client.execute({
+          sql: 'SELECT violation_count FROM users WHERE id = ?',
+          args: [sender.id],
+        })).rows[0];
+        const newCount = Number(updatedRow?.violation_count || 1);
+        const willAutoBlock = newCount >= autoBlockThreshold;
+
+        if (willAutoBlock) {
+          await client.execute({
+            sql: 'UPDATE users SET is_blocked = 1 WHERE id = ?',
+            args: [sender.id],
+          });
+        }
+
+        // Log the violation
+        await client.execute({
+          sql: 'INSERT INTO violations (user_id, username, matched_word, message, auto_blocked) VALUES (?, ?, ?, ?, ?)',
+          args: [sender.id, sender.username, matched, trimmed.slice(0, 500), willAutoBlock ? 1 : 0],
+        });
+
+        if (willAutoBlock) {
+          socket.emit('account-blocked', {
+            reason: `Your account has been automatically blocked after repeated violations.`,
+          });
+          setTimeout(() => socket.disconnect(true), 600);
+        } else {
+          socket.emit('word-violation', {
+            matched,
+            violationCount: newCount,
+            threshold: autoBlockThreshold,
+            remaining: autoBlockThreshold - newCount,
+          });
+        }
+        return; // message NOT delivered
+      }
+
+      // ── Pending count check ──────────────────────────────────
       const key = pendingKey(sender.id, toUserId);
       const count = pendingCounts.get(key) || 0;
-
       if (count >= 3) {
         socket.emit('message-blocked', { toUserId });
         return;
       }
 
-      const trimmed = content.trim().slice(0, 2000);
+      const safe = trimmed.slice(0, 2000);
       const result = await client.execute({
         sql: 'INSERT INTO private_messages (sender_id, receiver_id, content) VALUES (?, ?, ?)',
-        args: [sender.id, toUserId, trimmed],
+        args: [sender.id, toUserId, safe],
       });
 
-      // Sending to B resets B's blocked count toward A (sender is responding to B)
       pendingCounts.set(pendingKey(toUserId, sender.id), 0);
-      // Increment sender's own count toward B
       pendingCounts.set(key, count + 1);
 
       const message = {
@@ -158,19 +252,16 @@ function setupSocketHandlers(io) {
         sender_id: sender.id,
         receiver_id: toUserId,
         sender_name: sender.username,
-        content: trimmed,
+        content: safe,
         created_at: new Date().toISOString(),
       };
 
       socket.emit('new-private-message', message);
-
       const targetSocketId = userToSocket.get(toUserId);
-      if (targetSocketId) {
-        io.to(targetSocketId).emit('new-private-message', message);
-      }
+      if (targetSocketId) io.to(targetSocketId).emit('new-private-message', message);
     });
 
-    // ── Call signaling ──────────────────────────────────────────
+    // ── Call signaling ─────────────────────────────────────────
 
     socket.on('call-request', ({ targetUserId, callType }) => {
       const caller = socketToUser.get(socket.id);
@@ -209,7 +300,7 @@ function setupSocketHandlers(io) {
       io.to(peerSocketId).emit('call-ended', { enderId: ender.id });
     });
 
-    // ── WebRTC signaling ────────────────────────────────────────
+    // ── WebRTC signaling ───────────────────────────────────────
 
     socket.on('webrtc-offer', ({ targetUserId, offer }) => {
       const sender = socketToUser.get(socket.id);
@@ -230,7 +321,7 @@ function setupSocketHandlers(io) {
       if (targetSocketId) io.to(targetSocketId).emit('webrtc-ice-candidate', { candidate });
     });
 
-    // ── Disconnect ──────────────────────────────────────────────
+    // ── Disconnect ─────────────────────────────────────────────
 
     socket.on('disconnect', () => {
       const user = socketToUser.get(socket.id);
@@ -250,4 +341,4 @@ function setupSocketHandlers(io) {
   });
 }
 
-module.exports = { setupSocketHandlers };
+module.exports = { setupSocketHandlers, kickUser, refreshBlockedWords };
