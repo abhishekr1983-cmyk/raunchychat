@@ -295,6 +295,7 @@ export default function Chat() {
                     <div className="ulp-name">
                       {u.isAdmin && <span className="ulp-crown" title="Admin">👑</span>}
                       {u.username}
+                      {u.isBot && <span className="ulp-bot-tag" title="Verified member">✓</span>}
                       {unreadCount > 0 && <span className="ulp-badge">{unreadCount}</span>}
                     </div>
                     <div className="ulp-meta">{u.age} Yrs, {u.state}, {u.country}</div>

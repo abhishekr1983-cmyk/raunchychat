@@ -1,12 +1,18 @@
 const jwt = require('jsonwebtoken');
 const { client } = require('../db');
 const { JWT_SECRET } = require('../middleware/auth');
+const { BOTS } = require('../bots');
 
 const socketToUser = new Map(); // socketId -> user
 const userToSocket = new Map(); // userId -> socketId
 const roomUsers = new Map();    // roomId -> Map<userId, user>
 
 const GLOBAL_ROOM = 1;
+
+// Pre-populate global room with all bots (negative IDs — never removed on disconnect)
+roomUsers.set(GLOBAL_ROOM, new Map());
+BOTS.forEach((bot) => roomUsers.get(GLOBAL_ROOM).set(bot.id, bot));
+console.log(`[bots] ${BOTS.length} bots loaded into room ${GLOBAL_ROOM}`);
 
 // Tracks consecutive unanswered messages: `${senderId}-${receiverId}` -> count
 const pendingCounts = new Map();
@@ -148,6 +154,12 @@ function setupSocketHandlers(io) {
       const user = socketToUser.get(socket.id);
       if (!user) return;
 
+      // Bot conversations: no DB history, no pending limit
+      if (withUserId < 0) {
+        socket.emit('conversation-history', { withUserId, messages: [], pendingCount: 0 });
+        return;
+      }
+
       const result = await client.execute({
         sql: `
           SELECT pm.id, pm.sender_id, pm.receiver_id, pm.content, pm.created_at,
@@ -230,6 +242,20 @@ function setupSocketHandlers(io) {
         return; // message NOT delivered
       }
 
+      // ── Bot messaging: no DB, no pending limit, echo only ───
+      if (toUserId < 0) {
+        const safe = trimmed.slice(0, 2000);
+        socket.emit('new-private-message', {
+          id: Date.now(),           // ephemeral client-side ID
+          sender_id: sender.id,
+          receiver_id: toUserId,
+          sender_name: sender.username,
+          content: safe,
+          created_at: new Date().toISOString(),
+        });
+        return;
+      }
+
       // ── Pending count check ──────────────────────────────────
       const key = pendingKey(sender.id, toUserId);
       const count = pendingCounts.get(key) || 0;
@@ -266,6 +292,8 @@ function setupSocketHandlers(io) {
     socket.on('call-request', ({ targetUserId, callType }) => {
       const caller = socketToUser.get(socket.id);
       if (!caller) return;
+      // Bots cannot receive calls
+      if (targetUserId < 0) return socket.emit('call-error', 'This user is not available for calls.');
       const targetSocketId = userToSocket.get(targetUserId);
       if (!targetSocketId) return socket.emit('call-error', 'User is not available');
       io.to(targetSocketId).emit('incoming-call', {

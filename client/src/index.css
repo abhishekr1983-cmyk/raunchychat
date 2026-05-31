@@ -516,6 +516,17 @@ a { color: var(--accent); text-decoration: none; }
 .pc-peer-name-row { display: flex; align-items: center; gap: 8px; }
 .pc-peer-name { font-size: 1rem; font-weight: 700; color: var(--text); }
 .pc-admin-crown { font-size: 1rem; filter: drop-shadow(0 0 5px rgba(245,158,11,0.8)); }
+
+/* Bot notice banner in chat footer */
+.pc-bot-notice {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 12px; margin-bottom: 8px;
+  background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2);
+  border-radius: 10px; font-size: 0.78rem; color: var(--text2);
+}
+.pc-bot-notice-icon {
+  font-size: 0.85rem; color: var(--accent); font-weight: 800; flex-shrink: 0;
+}
 .pc-flag { font-size: 1.1rem; }
 .pc-peer-meta { font-size: 0.78rem; color: var(--text2); }
 .pc-header-actions { display: flex; align-items: center; gap: 6px; }
@@ -767,6 +778,13 @@ a { color: var(--accent); text-decoration: none; }
 }
 .ulp-item.new-join {
   animation: newJoinPulse 4s ease-out forwards;
+}
+
+/* Bot verified check tag in user list */
+.ulp-bot-tag {
+  font-size: 0.72rem; font-weight: 800;
+  color: var(--accent); flex-shrink: 0;
+  opacity: 0.85;
 }
 
 /* Admin crown badge */
