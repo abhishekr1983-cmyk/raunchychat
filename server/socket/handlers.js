@@ -14,6 +14,9 @@ roomUsers.set(GLOBAL_ROOM, new Map());
 BOTS.forEach((bot) => roomUsers.get(GLOBAL_ROOM).set(bot.id, bot));
 console.log(`[bots] ${BOTS.length} bots loaded into room ${GLOBAL_ROOM}`);
 
+// Helper: total people visible in the global room (real + bots)
+function roomOnlineCount() { return roomUsers.get(GLOBAL_ROOM)?.size ?? 0; }
+
 // Tracks consecutive unanswered messages: `${senderId}-${receiverId}` -> count
 const pendingCounts = new Map();
 
@@ -117,7 +120,7 @@ function setupSocketHandlers(io) {
 
         console.log(`[auth] ✓ ${user.username} (id=${user.id}) — ${usersInRoom.length} user(s)`);
         socket.emit('authenticated', user);
-        io.emit('online-count', userToSocket.size);
+        io.emit('online-count', roomOnlineCount());
       } catch (e) {
         console.warn(`[auth] invalid token:`, e.message);
         socket.emit('auth-error', 'Invalid token');
@@ -354,6 +357,41 @@ function setupSocketHandlers(io) {
       if (targetSocketId) io.to(targetSocketId).emit('webrtc-ice-candidate', { candidate });
     });
 
+    // ── Admin: bot controls ────────────────────────────────────
+
+    socket.on('admin-clear-bots', () => {
+      const admin = socketToUser.get(socket.id);
+      if (!admin?.isAdmin) return;
+      const room = roomUsers.get(GLOBAL_ROOM);
+      if (!room) return;
+      let removed = 0;
+      for (const [id] of room) { if (id < 0) { room.delete(id); removed++; } }
+      io.to(`room:${GLOBAL_ROOM}`).emit('room-users', Array.from(room.values()));
+      io.emit('online-count', roomOnlineCount());
+      socket.emit('bots-status', { active: false, count: 0 });
+      console.log(`[admin] ${admin.username} removed ${removed} bots`);
+    });
+
+    socket.on('admin-restore-bots', () => {
+      const admin = socketToUser.get(socket.id);
+      if (!admin?.isAdmin) return;
+      const room = roomUsers.get(GLOBAL_ROOM);
+      if (!room) return;
+      BOTS.forEach((bot) => room.set(bot.id, bot));
+      io.to(`room:${GLOBAL_ROOM}`).emit('room-users', Array.from(room.values()));
+      io.emit('online-count', roomOnlineCount());
+      socket.emit('bots-status', { active: true, count: BOTS.length });
+      console.log(`[admin] ${admin.username} restored ${BOTS.length} bots`);
+    });
+
+    socket.on('admin-get-bots-status', () => {
+      const admin = socketToUser.get(socket.id);
+      if (!admin?.isAdmin) return;
+      const room = roomUsers.get(GLOBAL_ROOM);
+      const activeCount = room ? [...room.keys()].filter((id) => id < 0).length : 0;
+      socket.emit('bots-status', { active: activeCount > 0, count: activeCount });
+    });
+
     // ── Disconnect ─────────────────────────────────────────────
 
     socket.on('disconnect', () => {
@@ -369,7 +407,7 @@ function setupSocketHandlers(io) {
           io.to(`room:${roomId}`).emit('user-left', user);
         }
       });
-      io.emit('online-count', userToSocket.size);
+      io.emit('online-count', roomOnlineCount());
     });
   });
 }

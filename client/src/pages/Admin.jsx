@@ -446,11 +446,68 @@ function ScriptsTab({ token, settings, updateSettings }) {
   );
 }
 
+// ── Bots control panel ─────────────────────────────────────────
+function BotsControl({ socket }) {
+  const [status, setStatus] = useState(null); // { active, count }
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!socket) return;
+    socket.emit('admin-get-bots-status');
+    socket.on('bots-status', setStatus);
+    return () => socket.off('bots-status', setStatus);
+  }, [socket]);
+
+  const clearBots = () => {
+    setLoading(true);
+    socket.emit('admin-clear-bots');
+    setTimeout(() => setLoading(false), 800);
+  };
+  const restoreBots = () => {
+    setLoading(true);
+    socket.emit('admin-restore-bots');
+    setTimeout(() => setLoading(false), 800);
+  };
+
+  return (
+    <div className="admin-section" style={{ marginTop: 20 }}>
+      <div className="admin-section-header">
+        <span className="admin-section-icon">🤖</span>
+        <span className="admin-section-title">Bot Users</span>
+        {status && (
+          <span style={{ marginLeft: 'auto', fontSize: '0.78rem', color: status.active ? 'var(--success)' : 'var(--text3)' }}>
+            {status.active ? `${status.count} active` : 'All removed'}
+          </span>
+        )}
+      </div>
+      <div className="admin-section-body" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <button
+          className="btn btn-danger btn-sm"
+          disabled={loading || status?.count === 0}
+          onClick={clearBots}
+        >
+          🗑 Remove All Bots
+        </button>
+        <button
+          className="btn btn-success btn-sm"
+          disabled={loading || (status?.active && status?.count === 100)}
+          onClick={restoreBots}
+        >
+          ♻️ Restore Bots
+        </button>
+        <span style={{ fontSize: '0.78rem', color: 'var(--text3)' }}>
+          Instantly adds or removes all 100 bot users for every connected session.
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Admin component ───────────────────────────────────────
 export default function Admin() {
   const { user, token, logout } = useAuth();
   const { settings, updateSettings } = useSiteSettings();
-  const { onlineCount } = useSocket();
+  const { socket, onlineCount } = useSocket();
   const navigate = useNavigate();
 
   const [tab, setTab] = useState('stats');
@@ -556,6 +613,7 @@ export default function Admin() {
               ))}
             </div>
             {statsErr && <p className="form-error">{statsErr}</p>}
+            <BotsControl socket={socket} />
           </>
         )}
 

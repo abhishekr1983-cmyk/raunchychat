@@ -51,12 +51,9 @@ function makeBots() {
 
   // ── 60 Male bots ────────────────────────────────────────────
   for (let i = 0; i < 60; i++) {
-    const baseName = MALE_NAMES[i];
-    // Append a number suffix to guarantee uniqueness within the list
-    const username = i < 30 ? baseName : `${baseName}${i - 29}`;
     bots.push({
       id: -(i + 1),                                     // -1 … -60
-      username,
+      username: MALE_NAMES[i],
       gender: 'Male',
       age: MALE_AGES[i],
       state: INDIAN_STATES[i % INDIAN_STATES.length],
@@ -68,11 +65,9 @@ function makeBots() {
 
   // ── 40 Female bots ──────────────────────────────────────────
   for (let i = 0; i < 40; i++) {
-    const baseName = FEMALE_NAMES[i];
-    const username = i < 20 ? baseName : `${baseName}${i - 19}`;
     bots.push({
       id: -(61 + i),                                    // -61 … -100
-      username,
+      username: FEMALE_NAMES[i],
       gender: 'Female',
       age: FEMALE_AGES[i],
       state: INDIAN_STATES[(i + 11) % INDIAN_STATES.length],
