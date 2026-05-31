@@ -23,10 +23,15 @@ async function initDB() {
     )
   `);
 
-  // Idempotent migration: add is_admin to existing DBs that predate this column
-  try {
-    await client.execute('ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0');
-  } catch { /* column already exists — fine */ }
+  // Idempotent migrations: add columns to existing DBs that predate them
+  const migrations = [
+    'ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0',
+    'ALTER TABLE users ADD COLUMN ip_address TEXT',
+    'ALTER TABLE users ADD COLUMN last_seen DATETIME',
+  ];
+  for (const sql of migrations) {
+    try { await client.execute(sql); } catch { /* column already exists — fine */ }
+  }
 
   await client.execute(`
     CREATE TABLE IF NOT EXISTS rooms (

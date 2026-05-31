@@ -63,6 +63,12 @@ router.post('/login', async (req, res) => {
     if (!row || !(await bcrypt.compare(password, row.password_hash)))
       return res.status(401).json({ error: 'Invalid credentials' });
 
+    // Update last_seen on login
+    await client.execute({
+      sql: 'UPDATE users SET last_seen = ? WHERE id = ?',
+      args: [new Date().toISOString(), Number(row.id)],
+    });
+
     const token = jwt.sign({ userId: Number(row.id) }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ token, user: safeUser(row) });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
@@ -79,6 +85,14 @@ router.post('/guest', async (req, res) => {
     if (Number(age) < 18 || Number(age) > 120)
       return res.status(400).json({ error: 'Age must be 18 or older' });
 
+    // Resolve real IP (works behind ngrok / reverse proxies with trust proxy enabled)
+    const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim()
+      || req.socket?.remoteAddress
+      || req.ip
+      || 'unknown';
+
+    const now = new Date().toISOString();
+
     const existing = (await client.execute({
       sql: 'SELECT id FROM users WHERE username = ?',
       args: [username],
@@ -86,8 +100,8 @@ router.post('/guest', async (req, res) => {
     if (existing) return res.status(409).json({ error: 'Username already taken, please choose another' });
 
     const result = await client.execute({
-      sql: 'INSERT INTO users (username, gender, age, state, country, is_guest) VALUES (?, ?, ?, ?, ?, 1)',
-      args: [username, gender, Number(age), state, country],
+      sql: 'INSERT INTO users (username, gender, age, state, country, is_guest, ip_address, last_seen) VALUES (?, ?, ?, ?, ?, 1, ?, ?)',
+      args: [username, gender, Number(age), state, country, ip, now],
     });
 
     const userId = Number(result.lastInsertRowid);

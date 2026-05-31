@@ -17,6 +17,7 @@ const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] },
 });
 
+app.set('trust proxy', 1); // trust X-Forwarded-For from ngrok / reverse proxies
 app.use(cors());
 app.use(express.json());
 
