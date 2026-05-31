@@ -14,8 +14,6 @@ function getAvatarColor(gender) {
   return 'var(--accent)';
 }
 
-const isPeerBot = (peer) => peer?.id < 0;
-
 export default function PrivateChat({ peer, socket, currentUser, onClose, onCall, callState, onBack }) {
   const [messages, setMessages] = useState([]);
   const [pendingCount, setPendingCount] = useState(0);
@@ -177,32 +175,7 @@ export default function PrivateChat({ peer, socket, currentUser, onClose, onCall
             <button className="pc-violation-close" onClick={clearWordViolation}>✕</button>
           </div>
         )}
-        {isPeerBot(peer) ? (
-          /* Bot: subtle notice banner + always-open input bar */
-          <>
-            <div className="pc-bot-notice">
-              <span className="pc-bot-notice-icon">✓</span>
-              <span>{peer.username} is a verified member and may reply later.</span>
-            </div>
-            <div className="pc-input-bar">
-              <input
-                ref={inputRef}
-                className="pc-input"
-                placeholder={`Message ${peer.username}…`}
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                onKeyDown={onKeyDown}
-                maxLength={2000}
-              />
-              <div className="pc-input-icons">
-                <button className="pc-icon-btn" title="Emoji">😊</button>
-              </div>
-              <button className="pc-send-btn" onClick={send} disabled={!text.trim()}>
-                SEND
-              </button>
-            </div>
-          </>
-        ) : isBlocked ? (
+        {isBlocked ? (
           <div className="pc-blocked">
             ⏳ You've sent 3 messages. Wait for <strong>{peer.username}</strong> to reply.
           </div>

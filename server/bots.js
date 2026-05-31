@@ -63,7 +63,6 @@ function makeBots() {
       country: 'India',
       isGuest: true,
       isAdmin: false,
-      isBot: true,
     });
   }
 
@@ -80,7 +79,6 @@ function makeBots() {
       country: 'India',
       isGuest: true,
       isAdmin: false,
-      isBot: true,
     });
   }
 

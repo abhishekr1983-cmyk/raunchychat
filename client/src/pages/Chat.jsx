@@ -277,7 +277,7 @@ export default function Chat() {
             filteredUsers.map((u) => {
               const unreadCount = unread[u.id] || 0;
               const isActive = selectedUser?.id === u.id;
-              const isNew = recentlyJoined.has(u.id);
+              const isNew = recentlyJoined.has(u.id) && u.id > 0; // only real users get animation
               return (
                 <div
                   key={u.id}
@@ -295,7 +295,6 @@ export default function Chat() {
                     <div className="ulp-name">
                       {u.isAdmin && <span className="ulp-crown" title="Admin">👑</span>}
                       {u.username}
-                      {u.isBot && <span className="ulp-bot-tag" title="Verified member">✓</span>}
                       {unreadCount > 0 && <span className="ulp-badge">{unreadCount}</span>}
                     </div>
                     <div className="ulp-meta">{u.age} Yrs, {u.state}, {u.country}</div>

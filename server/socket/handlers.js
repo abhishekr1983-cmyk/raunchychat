@@ -154,9 +154,10 @@ function setupSocketHandlers(io) {
       const user = socketToUser.get(socket.id);
       if (!user) return;
 
-      // Bot conversations: no DB history, no pending limit
+      // Bot IDs are negative — no DB rows exist, return empty history
       if (withUserId < 0) {
-        socket.emit('conversation-history', { withUserId, messages: [], pendingCount: 0 });
+        const myPending = pendingCounts.get(pendingKey(user.id, withUserId)) || 0;
+        socket.emit('conversation-history', { withUserId, messages: [], pendingCount: myPending });
         return;
       }
 
@@ -242,11 +243,15 @@ function setupSocketHandlers(io) {
         return; // message NOT delivered
       }
 
-      // ── Bot messaging: no DB, no pending limit, echo only ───
+      // ── Bot messaging: echo to sender, apply pending limit (bots never reply) ──
       if (toUserId < 0) {
+        const key = pendingKey(sender.id, toUserId);
+        const count = pendingCounts.get(key) || 0;
+        if (count >= 3) { socket.emit('message-blocked', { toUserId }); return; }
         const safe = trimmed.slice(0, 2000);
+        pendingCounts.set(key, count + 1);
         socket.emit('new-private-message', {
-          id: Date.now(),           // ephemeral client-side ID
+          id: Date.now(),
           sender_id: sender.id,
           receiver_id: toUserId,
           sender_name: sender.username,
@@ -292,8 +297,8 @@ function setupSocketHandlers(io) {
     socket.on('call-request', ({ targetUserId, callType }) => {
       const caller = socketToUser.get(socket.id);
       if (!caller) return;
-      // Bots cannot receive calls
-      if (targetUserId < 0) return socket.emit('call-error', 'This user is not available for calls.');
+      // Bots have no socket — treat same as offline user
+      if (targetUserId < 0) return socket.emit('call-error', 'User is not available');
       const targetSocketId = userToSocket.get(targetUserId);
       if (!targetSocketId) return socket.emit('call-error', 'User is not available');
       io.to(targetSocketId).emit('incoming-call', {
