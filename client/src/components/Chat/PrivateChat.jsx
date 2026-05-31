@@ -13,7 +13,7 @@ function getAvatarColor(gender) {
   return 'var(--accent)';
 }
 
-export default function PrivateChat({ peer, socket, currentUser, onClose, onCall, callState }) {
+export default function PrivateChat({ peer, socket, currentUser, onClose, onCall, callState, onBack }) {
   const [messages, setMessages] = useState([]);
   const [pendingCount, setPendingCount] = useState(0);
   const [text, setText] = useState('');
@@ -94,11 +94,15 @@ export default function PrivateChat({ peer, socket, currentUser, onClose, onCall
       {/* ── Chat header ── */}
       <div className="pc-header">
         <div className="pc-header-left">
+          {onBack && (
+            <button className="pc-mobile-back" onClick={onBack} title="Back">←</button>
+          )}
           <div className="pc-avatar-lg" style={{ background: getAvatarColor(peer.gender) }}>
             {peer.username[0].toUpperCase()}
           </div>
           <div className="pc-peer-details">
             <div className="pc-peer-name-row">
+              {peer.isAdmin && <span className="pc-admin-crown" title="Admin">👑</span>}
               <span className="pc-peer-name">{peer.username}</span>
               <span className="pc-flag">{getFlag(peer.country)}</span>
             </div>

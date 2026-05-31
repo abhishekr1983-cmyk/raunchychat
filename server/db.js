@@ -49,6 +49,33 @@ async function initDB() {
     )
   `);
 
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS site_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Seed default site settings (only if not present)
+  const defaults = [
+    ['site_name', 'RaunchyChat'],
+    ['site_logo', '🔥'],
+    ['site_tagline', 'Meet. Flirt. Connect.'],
+    ['meta_title', 'RaunchyChat — Meet & Chat Online'],
+    ['meta_description', 'Free adult chat rooms. Meet new people from around the world anonymously. No sign-up required.'],
+    ['meta_keywords', 'adult chat, free chat, anonymous chat, meet people online'],
+    ['default_theme', 'dark-seduction'],
+  ];
+  for (const [key, value] of defaults) {
+    try {
+      await client.execute({
+        sql: 'INSERT INTO site_settings (key, value) VALUES (?, ?)',
+        args: [key, value],
+      });
+    } catch { /* already exists — fine */ }
+  }
+
   await client.execute('DELETE FROM rooms');
   await client.execute({
     sql: 'INSERT INTO rooms (id, name, description) VALUES (1, ?, ?)',

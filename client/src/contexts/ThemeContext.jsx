@@ -37,6 +37,12 @@ export const THEMES = {
     swatch: '#ec4899',
     desc: 'Sensual rose',
   },
+  'daylight': {
+    name: 'Daylight',
+    emoji: '☀️',
+    swatch: '#e91e8c',
+    desc: 'Clean & bright',
+  },
 };
 
 const ThemeContext = createContext(null);

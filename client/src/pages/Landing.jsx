@@ -3,16 +3,18 @@ import LoginForm from '../components/Auth/LoginForm';
 import RegisterForm from '../components/Auth/RegisterForm';
 import GuestForm from '../components/Auth/GuestForm';
 import ThemeSelector from '../components/ThemeSelector';
+import { useSiteSettings } from '../contexts/SiteSettingsContext';
 
 export default function Landing() {
   const [modal, setModal] = useState(null); // 'login' | 'register' | 'guest'
+  const { settings } = useSiteSettings();
 
   return (
     <div className="landing">
       <div className="landing-theme-btn"><ThemeSelector /></div>
       <div className="landing-hero">
-        <div className="landing-logo">🔥</div>
-        <h1 className="landing-title">RaunchyChat</h1>
+        <div className="landing-logo">{settings.site_logo}</div>
+        <h1 className="landing-title">{settings.site_name}</h1>
         <p className="landing-subtitle">
           Adults only. Flirt, connect, and get wild with real people around the world — chat, voice, or video.
         </p>

@@ -7,6 +7,7 @@ const cors = require('cors');
 const { initDB, seedAdmin } = require('./db');
 const authRoutes = require('./routes/auth');
 const roomRoutes = require('./routes/rooms');
+const adminRoutes = require('./routes/admin');
 const { setupSocketHandlers } = require('./socket/handlers');
 
 const app = express();
@@ -21,6 +22,7 @@ app.use(express.json());
 
 app.use('/api/auth', authRoutes);
 app.use('/api/rooms', roomRoutes);
+app.use('/api/admin', adminRoutes);
 app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
 
 // Serve built React client

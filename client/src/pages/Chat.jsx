@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
+import { useSiteSettings } from '../contexts/SiteSettingsContext';
 import PrivateChat from '../components/Chat/PrivateChat';
 import IncomingCallModal from '../components/Call/IncomingCallModal';
 import VideoCall from '../components/Call/VideoCall';
@@ -8,6 +9,7 @@ import { COUNTRIES } from '../data/countries';
 import { getStates } from '../data/countryStates';
 import { getFlag } from '../utils/flags';
 import ThemeSelector from '../components/ThemeSelector';
+import { useNavigate } from 'react-router-dom';
 
 const GENDERS = ['Male', 'Female', 'Non-binary', 'Prefer not to say'];
 
@@ -20,6 +22,8 @@ function getAvatarColor(gender) {
 export default function Chat() {
   const { user, logout } = useAuth();
   const { socket, connected, onlineCount } = useSocket();
+  const { settings } = useSiteSettings();
+  const navigate = useNavigate();
 
   const [allUsers, setAllUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -27,6 +31,8 @@ export default function Chat() {
   const [callState, setCallState] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [search, setSearch] = useState('');
+  const [recentlyJoined, setRecentlyJoined] = useState(new Set());
+  const recentTimers = useRef({});
 
   // Filters
   const [filterGender, setFilterGender] = useState('');
@@ -41,8 +47,16 @@ export default function Chat() {
     if (!socket) return;
 
     const handleRoomUsers = (users) => setAllUsers(Array.isArray(users) ? users : []);
-    const handleUserJoined = (u) =>
+    const handleUserJoined = (u) => {
       setAllUsers((prev) => prev.find((p) => p.id === u.id) ? prev : [...prev, u]);
+      // Highlight the newly joined user for 4 seconds
+      setRecentlyJoined((prev) => new Set([...prev, u.id]));
+      if (recentTimers.current[u.id]) clearTimeout(recentTimers.current[u.id]);
+      recentTimers.current[u.id] = setTimeout(() => {
+        setRecentlyJoined((prev) => { const s = new Set(prev); s.delete(u.id); return s; });
+        delete recentTimers.current[u.id];
+      }, 4000);
+    };
     const handleUserLeft = (u) => {
       setAllUsers((prev) => prev.filter((p) => p.id !== u.id));
       setSelectedUser((sel) => sel?.id === u.id ? null : sel);
@@ -136,13 +150,13 @@ export default function Chat() {
   const others = allUsers.filter((u) => u.id !== user?.id);
 
   return (
-    <div className="chat-layout">
+    <div className={`chat-layout${selectedUser ? ' chat-open' : ''}`}>
 
       {/* ── Top header ── */}
       <header className="chat-header">
         <div className="ch-brand">
-          <span className="brand-logo">🔥</span>
-          <span className="brand-name">RaunchyChat</span>
+          <span className="brand-logo">{settings.site_logo}</span>
+          <span className="brand-name">{settings.site_name}</span>
         </div>
 
         <div className="ch-center">
@@ -168,6 +182,9 @@ export default function Chat() {
             {user?.isGuest && <span className="guest-badge">Guest</span>}
           </div>
           <ThemeSelector />
+          {user?.isAdmin && (
+            <button className="btn btn-ghost btn-sm" onClick={() => navigate('/admin')} title="Admin Panel">⚙ Admin</button>
+          )}
           <button className="btn btn-ghost btn-sm" onClick={logout}>Sign Out</button>
         </div>
       </header>
@@ -260,10 +277,11 @@ export default function Chat() {
             filteredUsers.map((u) => {
               const unreadCount = unread[u.id] || 0;
               const isActive = selectedUser?.id === u.id;
+              const isNew = recentlyJoined.has(u.id);
               return (
                 <div
                   key={u.id}
-                  className={`ulp-item ${isActive ? 'active' : ''}`}
+                  className={`ulp-item ${isActive ? 'active' : ''} ${isNew ? 'new-join' : ''}`}
                   onClick={() => openChat(u)}
                 >
                   <div
@@ -275,12 +293,16 @@ export default function Chat() {
                   </div>
                   <div className="ulp-info">
                     <div className="ulp-name">
+                      {u.isAdmin && <span className="ulp-crown" title="Admin">👑</span>}
                       {u.username}
                       {unreadCount > 0 && <span className="ulp-badge">{unreadCount}</span>}
                     </div>
                     <div className="ulp-meta">{u.age} Yrs, {u.state}, {u.country}</div>
                   </div>
-                  <span className="ulp-flag">{getFlag(u.country)}</span>
+                  <div className="ulp-right">
+                    {isNew && <span className="ulp-new-tag">NEW</span>}
+                    <span className="ulp-flag">{getFlag(u.country)}</span>
+                  </div>
                 </div>
               );
             })
@@ -296,6 +318,7 @@ export default function Chat() {
             socket={socket}
             currentUser={user}
             onClose={() => setSelectedUser(null)}
+            onBack={() => setSelectedUser(null)}
             onCall={initiateCall}
             callState={callState}
           />
