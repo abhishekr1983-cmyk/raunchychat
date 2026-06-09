@@ -1,6 +1,5 @@
-/* ── Variables & Themes ────────────────────────────────────── */
-:root, [data-theme="dark-seduction"] {
-  /* Chatib.us inspired — dark charcoal + teal/cyan */
+/* ── Chatib.us color scheme ─────────────────────────────────── */
+:root {
   --bg: #1a1c25;
   --bg2: #13151c;
   --bg3: #22252f;
@@ -19,119 +18,6 @@
   --users-w: 260px;
   --avatar-female: #ff6b9d;
   --avatar-male: #4cc9f0;
-}
-
-[data-theme="red-hot"] {
-  --bg: #2e0808;
-  --bg2: #3d1010;
-  --bg3: #521818;
-  --accent: #ef4444;
-  --accent-hover: #dc2626;
-  --accent2: #7f1d1d;
-  --success: #22c55e;
-  --danger: #fca5a5;
-  --text: #fff1f1;
-  --text2: #fca5a5;
-  --text3: #f87171;
-  --border: #6b2020;
-  --glow: rgba(239,68,68,0.3);
-}
-
-[data-theme="velvet-night"] {
-  --bg: #1a0d2e;
-  --bg2: #261646;
-  --bg3: #32205e;
-  --accent: #a855f7;
-  --accent-hover: #9333ea;
-  --accent2: #6d28d9;
-  --success: #34d399;
-  --danger: #f87171;
-  --text: #faf5ff;
-  --text2: #c4b5fd;
-  --text3: #8b5cf6;
-  --border: #3d2472;
-  --glow: rgba(168,85,247,0.3);
-}
-
-[data-theme="neon-sin"] {
-  --bg: #0f0f17;
-  --bg2: #17171f;
-  --bg3: #22222e;
-  --accent: #ff0080;
-  --accent-hover: #cc0066;
-  --accent2: #8000ff;
-  --success: #00ff88;
-  --danger: #ff4444;
-  --text: #ffffff;
-  --text2: #ff80bf;
-  --text3: #cc6699;
-  --border: #30303e;
-  --glow: rgba(255,0,128,0.35);
-}
-
-[data-theme="golden-desire"] {
-  --bg: #1c1500;
-  --bg2: #281e00;
-  --bg3: #382a00;
-  --accent: #f59e0b;
-  --accent-hover: #d97706;
-  --accent2: #b45309;
-  --success: #22c55e;
-  --danger: #ef4444;
-  --text: #fffbeb;
-  --text2: #fcd34d;
-  --text3: #a16207;
-  --border: #483600;
-  --glow: rgba(245,158,11,0.3);
-}
-
-[data-theme="rose-bloom"] {
-  --bg: #270a18;
-  --bg2: #381228;
-  --bg3: #4a1a38;
-  --accent: #ec4899;
-  --accent-hover: #db2777;
-  --accent2: #be185d;
-  --success: #34d399;
-  --danger: #f87171;
-  --text: #fdf2f8;
-  --text2: #f9a8d4;
-  --text3: #be185d;
-  --border: #5c2048;
-  --glow: rgba(236,72,153,0.3);
-}
-
-[data-theme="daylight"] {
-  --bg: #f0f2f5;
-  --bg2: #ffffff;
-  --bg3: #e4e6ea;
-  --accent: #e91e8c;
-  --accent-hover: #c2185b;
-  --accent2: #9c27b0;
-  --success: #2e7d32;
-  --danger: #c62828;
-  --text: #1c1e21;
-  --text2: #65676b;
-  --text3: #8a8d91;
-  --border: #dddfe2;
-  --glow: rgba(233,30,140,0.2);
-  --avatar-female: #e91e8c;
-  --avatar-male: #1565c0;
-}
-
-/* Neon glow effects for neon-sin theme */
-[data-theme="neon-sin"] .btn-primary,
-[data-theme="neon-sin"] .chip.active,
-[data-theme="neon-sin"] .uc-avatar,
-[data-theme="neon-sin"] .pc-avatar {
-  box-shadow: 0 0 12px var(--glow), 0 0 24px var(--glow);
-}
-[data-theme="neon-sin"] .user-card:hover,
-[data-theme="neon-sin"] .user-card.selected {
-  box-shadow: 0 0 10px var(--glow);
-}
-[data-theme="neon-sin"] .room-card:hover {
-  box-shadow: 0 0 10px var(--glow);
 }
 
 /* Glow on accent elements across all themes */
@@ -728,56 +614,6 @@ a { color: var(--accent); text-decoration: none; }
 .end-call-btn { background: var(--danger); border-color: var(--danger); }
 .end-call-btn:hover { background: #dc2626; }
 
-/* ── Theme selector ────────────────────────────────────────── */
-.theme-selector { position: relative; }
-.theme-trigger {
-  display: flex; align-items: center; gap: 7px;
-  background: var(--bg3); border: 1px solid var(--border);
-  border-radius: 20px; padding: 5px 12px;
-  color: var(--text2); font-size: 0.82rem; font-weight: 500;
-  cursor: pointer; transition: border-color 0.15s, color 0.15s;
-}
-.theme-trigger:hover { border-color: var(--accent); color: var(--text); }
-.theme-trigger-swatch {
-  width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
-  box-shadow: 0 0 6px var(--glow);
-}
-.theme-trigger-arrow { font-size: 0.6rem; opacity: 0.6; }
-
-.theme-dropdown {
-  position: absolute; top: calc(100% + 8px); right: 0;
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: 12px; padding: 8px; width: 210px;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.5);
-  z-index: 200; display: flex; flex-direction: column; gap: 2px;
-}
-.theme-dropdown-title {
-  font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.08em; color: var(--text3);
-  padding: 4px 8px 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px;
-}
-.theme-option {
-  display: flex; align-items: center; gap: 10px;
-  padding: 9px 10px; border-radius: 8px; border: none;
-  background: transparent; color: var(--text2); cursor: pointer;
-  text-align: left; transition: background 0.12s;
-  width: 100%;
-}
-.theme-option:hover { background: var(--bg3); color: var(--text); }
-.theme-option.active { background: rgba(255,255,255,0.05); color: var(--text); }
-.theme-option-swatch {
-  width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
-  box-shadow: 0 0 8px rgba(0,0,0,0.4);
-}
-.theme-option-info { flex: 1; display: flex; flex-direction: column; gap: 1px; }
-.theme-option-name { font-size: 0.85rem; font-weight: 500; }
-.theme-option-desc { font-size: 0.72rem; color: var(--text3); }
-.theme-option-check { color: var(--accent); font-weight: 700; font-size: 0.9rem; }
-
-/* Landing theme button */
-.landing-theme-btn {
-  position: fixed; top: 16px; right: 16px; z-index: 50;
-}
 
 /* ── Landing: live count + guest-first CTA ────────────────── */
 .landing-live-count {
@@ -878,18 +714,6 @@ a { color: var(--accent); text-decoration: none; }
   line-height: 1.4;
 }
 
-/* ── Daylight theme overrides ──────────────────────────────── */
-[data-theme="daylight"] .ulp-item {
-  border-bottom: 1px solid var(--border);
-}
-[data-theme="daylight"] .pc-bubble.other {
-  background: #e9ebee; color: #1c1e21;
-}
-[data-theme="daylight"] .ulp-item:hover { background: #e9ebee; }
-[data-theme="daylight"] .theme-option.active { background: rgba(0,0,0,0.06); }
-[data-theme="daylight"] .calling-banner {
-  background: rgba(233,30,140,0.08); border-color: rgba(233,30,140,0.25);
-}
 
 /* ── Mobile responsive ─────────────────────────────────────── */
 /* Mobile back button (hidden on desktop) */
@@ -945,13 +769,6 @@ a { color: var(--accent); text-decoration: none; }
   .user-name {
     display: none;
   }
-  .theme-trigger span:nth-child(2) {
-    display: none;
-  }
-  .theme-trigger {
-    padding: 5px 8px;
-  }
-
   /* Mobile chat header back button */
   .pc-mobile-back {
     display: flex;
@@ -996,10 +813,6 @@ a { color: var(--accent); text-decoration: none; }
   .landing-features {
     grid-template-columns: 1fr;
   }
-  .landing-theme-btn {
-    top: 10px; right: 10px;
-  }
-
   /* Modal full-screen on mobile */
   .modal {
     width: 100%;

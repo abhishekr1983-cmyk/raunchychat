@@ -2,9 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSiteSettings } from '../contexts/SiteSettingsContext';
 import { useSocket } from '../contexts/SocketContext';
-import { THEMES } from '../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
-import ThemeSelector from '../components/ThemeSelector';
 
 function formatDate(iso) {
   if (!iso) return '—';
@@ -667,9 +665,6 @@ export default function Admin() {
   const [seoForm, setSeoForm] = useState({ meta_title: '', meta_description: '', meta_keywords: '' });
   const [seoMsg, setSeoMsg] = useState(''); const [seoErr, setSeoErr] = useState('');
 
-  const [themeForm, setThemeForm] = useState({ default_theme: '' });
-  const [themeMsg, setThemeMsg] = useState('');
-
   const [autoBlockThreshold, setAutoBlockThreshold] = useState(
     parseInt(settings.auto_block_threshold) || 3
   );
@@ -679,7 +674,6 @@ export default function Admin() {
   useEffect(() => {
     setBrandForm({ site_name: settings.site_name || '', site_logo: settings.site_logo || '', site_tagline: settings.site_tagline || '' });
     setSeoForm({ meta_title: settings.meta_title || '', meta_description: settings.meta_description || '', meta_keywords: settings.meta_keywords || '' });
-    setThemeForm({ default_theme: settings.default_theme || 'dark-seduction' });
     setAutoBlockThreshold(parseInt(settings.auto_block_threshold) || 3);
   }, [settings]);
 
@@ -699,12 +693,6 @@ export default function Admin() {
     try { await updateSettings(seoForm, token); setSeoMsg('SEO settings saved ✓'); setTimeout(() => setSeoMsg(''), 3000); }
     catch (ex) { setSeoErr(ex.message); }
   };
-  const handleTheme = async (e) => {
-    e.preventDefault(); setThemeMsg('');
-    try { await updateSettings(themeForm, token); setThemeMsg('Default theme saved ✓'); setTimeout(() => setThemeMsg(''), 3000); }
-    catch { setThemeMsg('Failed to save'); }
-  };
-
   if (!user?.isAdmin) return null;
 
   const TABS = [
@@ -715,7 +703,6 @@ export default function Admin() {
     { key: 'scripts',      label: '📡 Scripts' },
     { key: 'branding',     label: '🎨 Branding' },
     { key: 'seo',          label: '🔍 SEO' },
-    { key: 'theme',        label: '✨ Theme' },
   ];
 
   return (
@@ -727,7 +714,6 @@ export default function Admin() {
           <span className="admin-badge">Admin</span>
         </div>
         <div className="admin-header-right">
-          <ThemeSelector />
           <button className="btn btn-ghost btn-sm" onClick={() => navigate('/chat')}>← Chat</button>
           <button className="btn btn-ghost btn-sm" onClick={logout}>Sign Out</button>
         </div>
@@ -836,27 +822,16 @@ export default function Admin() {
           </div>
         )}
 
-        {/* Theme */}
+        {/* Theme tab removed */}
         {tab === 'theme' && (
           <div className="admin-section">
-            <div className="admin-section-header"><span className="admin-section-icon">✨</span><span className="admin-section-title">Default Theme for New Users</span></div>
-            <form className="admin-section-body" onSubmit={handleTheme}>
-              <div className="admin-field">
-                <label>Default Theme</label>
-                <select value={themeForm.default_theme} onChange={(e) => setThemeForm({ default_theme: e.target.value })}>
-                  {Object.entries(THEMES).map(([key, { name, emoji }]) => (
-                    <option key={key} value={key}>{emoji} {name}</option>
-                  ))}
-                </select>
-                <span className="admin-field-hint">Applied to users who haven't chosen a theme yet</span>
-              </div>
-              <div className="admin-save-row">
-                <button type="submit" className="btn btn-primary">Save Theme</button>
-                {themeMsg && <span className="admin-save-msg">{themeMsg}</span>}
-              </div>
-            </form>
+            <div className="admin-section-header"><span className="admin-section-icon">✨</span><span className="admin-section-title">Theme</span></div>
+            <div className="admin-section-body">
+              <p style={{ color: 'var(--text2)' }}>The site uses a fixed chatib.us-style theme.</p>
+            </div>
           </div>
         )}
+
 
       </div>
     </div>

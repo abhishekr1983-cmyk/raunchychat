@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import LoginForm from '../components/Auth/LoginForm';
 import RegisterForm from '../components/Auth/RegisterForm';
 import GuestForm from '../components/Auth/GuestForm';
-import ThemeSelector from '../components/ThemeSelector';
 import { useSiteSettings } from '../contexts/SiteSettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { COUNTRIES } from '../data/countries';
@@ -148,7 +147,6 @@ export default function Landing() {
 
   return (
     <div className="landing">
-      <div className="landing-theme-btn"><ThemeSelector /></div>
 
       {/* Telegram channel banner */}
       {channelLink && (

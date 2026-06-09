@@ -8,7 +8,6 @@ import VideoCall from '../components/Call/VideoCall';
 import { COUNTRIES } from '../data/countries';
 import { getStates } from '../data/countryStates';
 import { getFlag } from '../utils/flags';
-import ThemeSelector from '../components/ThemeSelector';
 import { useNavigate } from 'react-router-dom';
 
 const GENDERS = ['Male', 'Female', 'Non-binary', 'Prefer not to say'];
@@ -189,7 +188,6 @@ export default function Chat() {
             <span className="user-name">{user?.username}</span>
             {user?.isGuest && <span className="guest-badge">Guest</span>}
           </div>
-          <ThemeSelector />
           {user?.isAdmin && (
             <button className="btn btn-ghost btn-sm" onClick={() => navigate('/admin')} title="Admin Panel">⚙ Admin</button>
           )}
