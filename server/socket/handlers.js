@@ -289,6 +289,10 @@ function setupSocketHandlers(io) {
       socket.emit('new-private-message', message);
       const targetSocketId = userToSocket.get(toUserId);
       if (targetSocketId) io.to(targetSocketId).emit('new-private-message', message);
+
+      // Signal both sides to refresh their recent-chats list
+      socket.emit('refresh-recent-chats');
+      if (targetSocketId) io.to(targetSocketId).emit('refresh-recent-chats');
     });
 
     // ── Call signaling ─────────────────────────────────────────
@@ -351,6 +355,60 @@ function setupSocketHandlers(io) {
     socket.on('webrtc-ice-candidate', ({ targetUserId, candidate }) => {
       const targetSocketId = userToSocket.get(targetUserId);
       if (targetSocketId) io.to(targetSocketId).emit('webrtc-ice-candidate', { candidate });
+    });
+
+    // ── Recent chat history ────────────────────────────────────
+
+    socket.on('get-recent-chats', async () => {
+      const user = socketToUser.get(socket.id);
+      if (!user) return;
+
+      try {
+        // Get the most recent message per unique conversation partner
+        const result = await client.execute({
+          sql: `
+            WITH convos AS (
+              SELECT
+                CASE WHEN sender_id = ? THEN receiver_id ELSE sender_id END AS other_id,
+                content, sender_id, created_at,
+                ROW_NUMBER() OVER (
+                  PARTITION BY CASE WHEN sender_id = ? THEN receiver_id ELSE sender_id END
+                  ORDER BY created_at DESC
+                ) AS rn
+              FROM private_messages
+              WHERE (sender_id = ? OR receiver_id = ?)
+                AND sender_id > 0 AND receiver_id > 0
+            )
+            SELECT c.other_id, c.content, c.sender_id, c.created_at,
+                   u.username, u.gender, u.age, u.state, u.country
+            FROM convos c
+            JOIN users u ON u.id = c.other_id
+            WHERE c.rn = 1
+            ORDER BY c.created_at DESC
+            LIMIT 30
+          `,
+          args: [user.id, user.id, user.id, user.id],
+        });
+
+        const chats = result.rows.map((row) => ({
+          user: {
+            id: Number(row.other_id),
+            username: row.username,
+            gender: row.gender,
+            age: Number(row.age),
+            state: row.state,
+            country: row.country,
+          },
+          lastMessage: row.content,
+          lastTime: row.created_at,
+          isOwn: Number(row.sender_id) === user.id,
+        }));
+
+        socket.emit('recent-chats', chats);
+      } catch (e) {
+        console.warn('[recent-chats] error:', e.message);
+        socket.emit('recent-chats', []);
+      }
     });
 
     // ── Typing indicators ──────────────────────────────────────

@@ -258,6 +258,22 @@ a { color: var(--accent); text-decoration: none; }
   display: flex; flex-direction: column; overflow: hidden;
 }
 
+/* People | Messages top-level tabs */
+.ulp-main-tabs { display: flex; background: #0d0f14; border-bottom: 2px solid var(--border); flex-shrink: 0; }
+.ulp-main-tab {
+  flex: 1; padding: 12px 8px; border: none; background: transparent;
+  color: var(--text2); font-size: 0.85rem; font-weight: 600;
+  cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px;
+  transition: all 0.15s;
+}
+.ulp-main-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.ulp-main-tab:hover:not(.active) { color: var(--text); }
+
+/* Recent chats — last message preview */
+.ulp-last-msg { color: var(--text3) !important; font-size: 0.74rem !important; }
+.ulp-you { color: var(--accent); }
+.ulp-msg-time { font-size: 0.7rem; color: var(--text3); flex-shrink: 0; white-space: nowrap; }
+
 .ulp-search-row {
   display: flex; align-items: center; gap: 8px;
   padding: 12px 12px 8px;

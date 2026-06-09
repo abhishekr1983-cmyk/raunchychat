@@ -1,17 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { getFlag } from '../../utils/flags';
+import { getAvatarStyle, getInitial } from '../../utils/avatar';
 import { useSocket } from '../../contexts/SocketContext';
 
 const MAX_PENDING = 3;
 
 function formatTime(iso) {
   return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
-function getAvatarColor(gender) {
-  if (gender === 'Female') return 'var(--avatar-female, #e91e8c)';
-  if (gender === 'Male') return 'var(--avatar-male, #1e88e5)';
-  return 'var(--accent)';
 }
 
 function playPing() {
@@ -183,8 +178,8 @@ export default function PrivateChat({ peer, socket, currentUser, onClose, onCall
           {onBack && (
             <button className="pc-mobile-back" onClick={onBack} title="Back">←</button>
           )}
-          <div className="pc-avatar-lg" style={{ background: getAvatarColor(peer.gender) }}>
-            {peer.username[0].toUpperCase()}
+          <div className="pc-avatar-lg" style={getAvatarStyle(peer.username)}>
+            {getInitial(peer.username)}
           </div>
           <div className="pc-peer-details">
             <div className="pc-peer-name-row">
@@ -210,8 +205,8 @@ export default function PrivateChat({ peer, socket, currentUser, onClose, onCall
       <div className="pc-messages" ref={messagesRef} onScroll={handleScroll}>
         {messages.length === 0 ? (
           <div className="pc-empty">
-            <div className="pc-empty-avatar" style={{ background: getAvatarColor(peer.gender) }}>
-              {peer.username[0].toUpperCase()}
+            <div className="pc-empty-avatar" style={getAvatarStyle(peer.username)}>
+              {getInitial(peer.username)}
             </div>
             <p>Say hi to <strong>{peer.username}</strong> 👋</p>
             <p className="pc-empty-sub">{peer.age} yrs · {peer.state}, {peer.country}</p>
@@ -222,8 +217,8 @@ export default function PrivateChat({ peer, socket, currentUser, onClose, onCall
             return (
               <div key={msg.id} className={`pc-msg-row ${isOwn ? 'own' : 'other'}`}>
                 {!isOwn && (
-                  <div className="pc-msg-avatar" style={{ background: getAvatarColor(peer.gender) }}>
-                    {peer.username[0].toUpperCase()}
+                  <div className="pc-msg-avatar" style={getAvatarStyle(peer.username)}>
+                    {getInitial(peer.username)}
                   </div>
                 )}
                 <div className="pc-msg-body">

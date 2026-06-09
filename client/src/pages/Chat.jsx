@@ -6,13 +6,8 @@ import PrivateChat from '../components/Chat/PrivateChat';
 import IncomingCallModal from '../components/Call/IncomingCallModal';
 import VideoCall from '../components/Call/VideoCall';
 import { getFlag } from '../utils/flags';
+import { getAvatarStyle, getInitial } from '../utils/avatar';
 import { useNavigate } from 'react-router-dom';
-
-function getAvatarColor(gender) {
-  if (gender === 'Female') return 'var(--avatar-female, #e91e8c)';
-  if (gender === 'Male') return 'var(--avatar-male, #1e88e5)';
-  return 'var(--accent)';
-}
 
 export default function Chat() {
   const { user, logout } = useAuth();
@@ -26,6 +21,8 @@ export default function Chat() {
   const [callState, setCallState] = useState(null);
   const [search, setSearch] = useState('');
   const [genderTab, setGenderTab] = useState('All'); // 'All' | 'Male' | 'Female'
+  const [leftTab, setLeftTab] = useState('people');  // 'people' | 'messages'
+  const [recentChats, setRecentChats] = useState([]);
   const [recentlyJoined, setRecentlyJoined] = useState(new Set());
   const recentTimers = useRef({});
   // Stable per-session shuffle: map userId → random sort key assigned on first sight
@@ -97,6 +94,26 @@ export default function Chat() {
       socket.off('call-error', handleCallError);
     };
   }, [socket]);
+
+  // ── Recent chats (Messages tab) ─────────────────────────────
+  const fetchRecentChats = useCallback(() => {
+    if (socket) socket.emit('get-recent-chats');
+  }, [socket]);
+
+  useEffect(() => {
+    if (!socket) return;
+    socket.on('recent-chats', setRecentChats);
+    socket.on('refresh-recent-chats', fetchRecentChats);
+    return () => {
+      socket.off('recent-chats', setRecentChats);
+      socket.off('refresh-recent-chats', fetchRecentChats);
+    };
+  }, [socket, fetchRecentChats]);
+
+  // Fetch when switching to messages tab
+  useEffect(() => {
+    if (leftTab === 'messages') fetchRecentChats();
+  }, [leftTab, fetchRecentChats]);
 
   // Room join is now handled server-side inside the authenticate handler —
   // no client-side join-room emission needed, which eliminates the race condition.
@@ -176,76 +193,111 @@ export default function Chat() {
 
       {/* ── Left: User list panel ── */}
       <aside className="user-list-panel">
-        {/* Search box */}
-        <div className="ulp-search-row">
-          <input
-            className="ulp-search"
-            placeholder="🔍  Search users…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+
+        {/* Top-level tabs: People | Messages */}
+        <div className="ulp-main-tabs">
+          <button className={`ulp-main-tab ${leftTab === 'people' ? 'active' : ''}`} onClick={() => setLeftTab('people')}>
+            People
+          </button>
+          <button className={`ulp-main-tab ${leftTab === 'messages' ? 'active' : ''}`} onClick={() => { setLeftTab('messages'); fetchRecentChats(); }}>
+            Messages
+          </button>
         </div>
 
-        {/* Gender filter tabs */}
-        <div className="ulp-gender-tabs">
-          {['All', 'Male', 'Female'].map((tab) => (
-            <button
-              key={tab}
-              className={`ulp-gender-tab ${genderTab === tab ? 'active' : ''}`}
-              onClick={() => setGenderTab(tab)}
-            >
-              {tab === 'Male' ? '♂ Men' : tab === 'Female' ? '♀ Women' : 'All'}
-            </button>
-          ))}
-        </div>
-
-        {/* Online count bar */}
-        <div className="ulp-count">
-          <span className="ulp-count-dot" />
-          ONLINE {onlineCount}
-          <span className="ulp-shown">· showing {filteredUsers.length}</span>
-        </div>
-
-        {/* User list */}
-        <div className="ulp-list">
-          {filteredUsers.length === 0 ? (
-            <div className="ulp-empty">
-              {others.length === 0 ? '🌙 No one online yet' : '🔍 No matches'}
+        {leftTab === 'people' ? (
+          <>
+            {/* Search box */}
+            <div className="ulp-search-row">
+              <input className="ulp-search" placeholder="🔍  Search users…" value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
-          ) : (
-            filteredUsers.map((u) => {
-              const unreadCount = unread[u.id] || 0;
-              const isActive = selectedUser?.id === u.id;
-              const isNew = recentlyJoined.has(u.id) && u.id > 0;
-              return (
-                <div
-                  key={u.id}
-                  className={`ulp-item gender-${(u.gender || 'other').toLowerCase()} ${isActive ? 'active' : ''} ${isNew ? 'new-join' : ''}`}
-                  onClick={() => openChat(u)}
-                >
-                  <div
-                    className="ulp-avatar"
-                    style={{ background: getAvatarColor(u.gender) }}
-                  >
-                    {u.username[0].toUpperCase()}
-                    <span className="ulp-online-ring" />
-                  </div>
-                  <div className="ulp-info">
-                    <div className="ulp-name">
-                      {u.isAdmin && <span className="ulp-crown" title="Admin">👑</span>}
-                      {u.username}
+
+            {/* Gender filter tabs */}
+            <div className="ulp-gender-tabs">
+              {['All', 'Male', 'Female'].map((tab) => (
+                <button key={tab} className={`ulp-gender-tab ${genderTab === tab ? 'active' : ''}`} onClick={() => setGenderTab(tab)}>
+                  {tab === 'Male' ? '♂ Men' : tab === 'Female' ? '♀ Women' : 'All'}
+                </button>
+              ))}
+            </div>
+
+            {/* Online count */}
+            <div className="ulp-count">
+              <span className="ulp-count-dot" />
+              ONLINE {onlineCount}
+              <span className="ulp-shown">· showing {filteredUsers.length}</span>
+            </div>
+
+            {/* User list */}
+            <div className="ulp-list">
+              {filteredUsers.length === 0 ? (
+                <div className="ulp-empty">{others.length === 0 ? '🌙 No one online yet' : '🔍 No matches'}</div>
+              ) : (
+                filteredUsers.map((u) => {
+                  const unreadCount = unread[u.id] || 0;
+                  const isActive = selectedUser?.id === u.id;
+                  const isNew = recentlyJoined.has(u.id) && u.id > 0;
+                  return (
+                    <div
+                      key={u.id}
+                      className={`ulp-item gender-${(u.gender || 'other').toLowerCase()} ${isActive ? 'active' : ''} ${isNew ? 'new-join' : ''}`}
+                      onClick={() => openChat(u)}
+                    >
+                      <div className="ulp-avatar" style={getAvatarStyle(u.username)}>
+                        {getInitial(u.username)}
+                        <span className="ulp-online-ring" />
+                      </div>
+                      <div className="ulp-info">
+                        <div className="ulp-name">
+                          {u.isAdmin && <span className="ulp-crown" title="Admin">👑</span>}
+                          {u.username}
+                          {unreadCount > 0 && <span className="ulp-badge">{unreadCount}</span>}
+                        </div>
+                        <div className="ulp-meta">{u.age} · {u.state}, {u.country} {getFlag(u.country)}</div>
+                      </div>
                     </div>
-                    <div className="ulp-meta">{u.age} · {u.state}, {u.country}</div>
+                  );
+                })
+              )}
+            </div>
+          </>
+        ) : (
+          /* ── Messages tab: recent conversations ── */
+          <div className="ulp-list">
+            {recentChats.length === 0 ? (
+              <div className="ulp-empty">💬 No conversations yet.<br />Start chatting with someone!</div>
+            ) : (
+              recentChats.map((chat) => {
+                const u = chat.user;
+                const isActive = selectedUser?.id === u.id;
+                const unreadCount = unread[u.id] || 0;
+                return (
+                  <div
+                    key={u.id}
+                    className={`ulp-item gender-${(u.gender || 'other').toLowerCase()} ${isActive ? 'active' : ''}`}
+                    onClick={() => openChat(u)}
+                  >
+                    <div className="ulp-avatar" style={getAvatarStyle(u.username)}>
+                      {getInitial(u.username)}
+                    </div>
+                    <div className="ulp-info">
+                      <div className="ulp-name">
+                        {u.username}
+                        {unreadCount > 0 && <span className="ulp-badge">{unreadCount}</span>}
+                      </div>
+                      <div className="ulp-meta ulp-last-msg">
+                        {chat.isOwn && <span className="ulp-you">You: </span>}
+                        {chat.lastMessage?.slice(0, 35)}{chat.lastMessage?.length > 35 ? '…' : ''}
+                      </div>
+                    </div>
+                    <div className="ulp-msg-time">
+                      {new Date(chat.lastTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
                   </div>
-                  <div className="ulp-right">
-                    <span className="ulp-flag">{getFlag(u.country)}</span>
-                    {unreadCount > 0 && <span className="ulp-badge">{unreadCount}</span>}
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
+                );
+              })
+            )}
+          </div>
+        )}
       </aside>
 
       {/* ── Right: Chat main ── */}
