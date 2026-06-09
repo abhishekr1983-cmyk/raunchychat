@@ -178,8 +178,8 @@ export default function Chat() {
 
         <div className="ch-right">
           <div className="user-chip">
-            <div className="user-avatar" style={{ background: getAvatarColor(user?.gender) }}>
-              {user?.username?.[0]?.toUpperCase()}
+            <div className="user-avatar" style={getAvatarStyle(user?.username || '?')}>
+              {getInitial(user?.username || '?')}
             </div>
             <span className="user-name">{user?.username}</span>
             {user?.isGuest && <span className="guest-badge">Guest</span>}
