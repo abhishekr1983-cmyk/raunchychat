@@ -195,7 +195,7 @@ export default function PrivateChat({ peer, socket, currentUser, onClose, onCall
             <div className="pc-peer-meta">
               {peerTyping
                 ? <span className="pc-typing-status">typing…</span>
-                : <>{peer.gender} · {peer.age} Yrs · {peer.state}, {peer.country}</>}
+                : <><span className="pc-online-dot" />Online · {peer.age} Yrs · {peer.state}, {peer.country}</>}
             </div>
           </div>
         </div>
@@ -273,16 +273,6 @@ export default function PrivateChat({ peer, socket, currentUser, onClose, onCall
           </div>
         ) : (
           <>
-            {pendingCount > 0 && peer.id > 0 && (
-              <div className="pc-limit-bar">
-                {[0, 1, 2].map((i) => (
-                  <span key={i} className={`pc-dot ${i < pendingCount ? 'used' : ''}`} />
-                ))}
-                <span className="pc-limit-text">
-                  {remaining} message{remaining !== 1 ? 's' : ''} left before waiting for reply
-                </span>
-              </div>
-            )}
             <div className="pc-input-bar">
               <input
                 ref={inputRef}

@@ -137,43 +137,33 @@ a { color: var(--accent); text-decoration: none; }
 .form-switch { font-size: 0.85rem; color: var(--text2); text-align: center; }
 .link-btn { background: none; border: none; color: var(--accent); text-decoration: underline; }
 
-/* ── Landing ───────────────────────────────────────────────── */
-.landing {
-  min-height: 100vh;
-  display: flex; flex-direction: column; align-items: center;
-  padding: 60px 24px 80px;
-  gap: 60px;
-  background: linear-gradient(160deg, #0d0f14 0%, #13151c 50%, #1a1c25 100%);
-}
-.landing-hero {
-  text-align: center;
-  max-width: 600px;
-  display: flex; flex-direction: column; align-items: center; gap: 20px;
-}
-.landing-logo { font-size: 4rem; }
-.landing-title {
-  font-size: 3rem; font-weight: 700;
-  background: linear-gradient(135deg, #ffffff 40%, #00c5d8 100%);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-.landing-subtitle { font-size: 1.1rem; color: var(--text2); line-height: 1.7; }
-.landing-actions { display: flex; flex-direction: column; gap: 12px; align-items: center; width: 100%; max-width: 420px; margin: 0 auto; }
-.landing-note { font-size: 0.8rem; color: var(--text3); }
-.landing-features {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px; width: min(900px, 100%);
-}
-.feature-card {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 28px;
-  display: flex; flex-direction: column; gap: 10px;
-}
-.feature-icon { font-size: 2rem; }
-.feature-card h3 { font-size: 1.1rem; }
-.feature-card p { color: var(--text2); font-size: 0.9rem; }
+/* ── Landing — chatib style ─────────────────────────────────── */
+.cb-landing { min-height: 100vh; display: flex; flex-direction: column; background: #0d0f14; }
+.cb-landing-header { height: 56px; background: #0d0f14; border-bottom: 1px solid #1e2028; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; }
+.cb-logo { display: flex; align-items: center; gap: 8px; }
+.cb-logo-icon { font-size: 1.4rem; }
+.cb-logo-text { font-size: 1.3rem; font-weight: 700; color: var(--accent); letter-spacing: -0.02em; }
+.cb-live-badge { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--text2); }
+.cb-live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); animation: livePulse 2s infinite; flex-shrink: 0; }
+.cb-header-auth { display: flex; gap: 8px; }
+
+.cb-hero { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 16px; gap: 24px; }
+.cb-hero-title { font-size: 2.4rem; font-weight: 700; text-align: center; color: var(--text); }
+.cb-hero-sub { font-size: 1rem; color: var(--text2); text-align: center; margin-top: -12px; }
+
+.cb-entry-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 28px; width: min(440px, 100%); display: flex; flex-direction: column; gap: 16px; }
+.cb-field-label { font-size: 0.8rem; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+.cb-gender-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cb-gender-btn { padding: 14px 10px; border-radius: 8px; border: 2px solid var(--border); background: var(--bg3); color: var(--text2); font-size: 1rem; font-weight: 600; transition: all 0.15s; cursor: pointer; }
+.cb-gender-btn.male.active { border-color: #4cc9f0; background: rgba(76,201,240,0.1); color: #4cc9f0; }
+.cb-gender-btn.female.active { border-color: #ff6b9d; background: rgba(255,107,157,0.1); color: #ff6b9d; }
+.cb-input { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 11px 14px; color: var(--text); font-size: 0.95rem; font-family: inherit; outline: none; transition: border-color 0.15s; }
+.cb-input:focus { border-color: var(--accent); }
+.cb-row { display: grid; grid-template-columns: 1fr 90px; gap: 10px; }
+.cb-start-btn { width: 100%; padding: 14px; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 700; cursor: pointer; transition: background 0.15s; margin-top: 4px; }
+.cb-start-btn:hover:not(:disabled) { background: var(--accent-hover); }
+.cb-start-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.cb-disclaimer { text-align: center; font-size: 0.75rem; color: var(--text3); }
 
 /* ── Lobby ─────────────────────────────────────────────────── */
 .lobby-layout { min-height: 100vh; display: flex; flex-direction: column; }
@@ -315,6 +305,12 @@ a { color: var(--accent); text-decoration: none; }
   align-self: flex-start;
 }
 
+/* Gender filter tabs */
+.ulp-gender-tabs { display: flex; border-bottom: 1px solid var(--border); }
+.ulp-gender-tab { flex: 1; padding: 9px 4px; border: none; background: transparent; color: var(--text2); font-size: 0.82rem; font-weight: 500; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; }
+.ulp-gender-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.ulp-gender-tab:hover:not(.active) { color: var(--text); }
+
 /* Online count bar */
 .ulp-count {
   padding: 6px 14px; font-size: 0.72rem; font-weight: 700;
@@ -341,10 +337,13 @@ a { color: var(--accent); text-decoration: none; }
   padding: 11px 14px; cursor: pointer;
   transition: background 0.12s;
   border-bottom: 1px solid rgba(255,255,255,0.03);
+  border-left: 3px solid transparent;
   position: relative;
 }
 .ulp-item:hover { background: var(--bg3); }
-.ulp-item.active { background: rgba(0,197,216,0.12); border-left: 3px solid var(--accent); }
+.ulp-item.active { background: rgba(0,197,216,0.12); border-left-color: var(--accent) !important; }
+.ulp-item.gender-male { border-left-color: #4cc9f0; }
+.ulp-item.gender-female { border-left-color: #ff6b9d; }
 .ulp-avatar {
   width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
@@ -615,26 +614,8 @@ a { color: var(--accent); text-decoration: none; }
 .end-call-btn:hover { background: #dc2626; }
 
 
-/* ── Landing: live count + guest-first CTA ────────────────── */
-.landing-live-count {
-  display: inline-flex; align-items: center; gap: 8px;
-  background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3);
-  border-radius: 20px; padding: 6px 16px; margin-bottom: 20px;
-  font-size: 0.9rem; color: var(--text2);
-}
-.landing-live-dot {
-  width: 8px; height: 8px; border-radius: 50%; background: var(--success);
-  animation: livePulse 2s ease-in-out infinite; flex-shrink: 0;
-}
+/* ── Landing live pulse animation ───────────────────────────── */
 @keyframes livePulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-
-.landing-guest-btn {
-  width: 100%; justify-content: center; font-size: 1.05rem;
-  padding: 14px 28px; border-radius: 12px;
-}
-.landing-actions-secondary {
-  display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
-}
 
 /* ── Password show/hide ────────────────────────────────────── */
 .pw-wrap { position: relative; display: flex; align-items: center; }
@@ -646,6 +627,16 @@ a { color: var(--accent); text-decoration: none; }
   line-height: 1;
 }
 .pw-eye:hover { opacity: 1; }
+
+/* ── Online dot in private chat header ─────────────────────── */
+.pc-online-dot {
+  display: inline-block;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--success);
+  margin-right: 5px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
 
 /* ── Typing bubble ─────────────────────────────────────────── */
 .pc-typing-status { color: var(--accent); font-style: italic; font-size: 0.78rem; }
@@ -803,16 +794,10 @@ a { color: var(--accent); text-decoration: none; }
   }
 
   /* Landing page mobile */
-  .landing-title {
-    font-size: 2rem;
-  }
-  .landing {
-    padding: 40px 16px 60px;
-    gap: 40px;
-  }
-  .landing-features {
-    grid-template-columns: 1fr;
-  }
+  .cb-hero-title { font-size: 1.7rem; }
+  .cb-entry-card { padding: 20px; }
+  .cb-row { grid-template-columns: 1fr; }
+
   /* Modal full-screen on mobile */
   .modal {
     width: 100%;
@@ -1172,74 +1157,7 @@ a { color: var(--accent); text-decoration: none; }
   }
 }
 
-/* ── Telegram channel banner ───────────────────────────────── */
-.tg-channel-banner {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: linear-gradient(135deg, #0088cc 0%, #0099dd 100%);
-  color: #fff;
-  padding: 10px 22px;
-  border-radius: 40px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  text-decoration: none;
-  transition: opacity 0.15s, transform 0.15s;
-  box-shadow: 0 4px 16px rgba(0,136,204,0.35);
-  position: fixed;
-  top: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 50;
-  white-space: nowrap;
-}
-.tg-channel-banner:hover {
-  opacity: 0.92;
-  transform: translateX(-50%) translateY(-1px);
-  color: #fff;
-}
-.tg-channel-icon { font-size: 1.1rem; }
-.tg-channel-arrow { opacity: 0.8; }
-
-/* ── Telegram login section ────────────────────────────────── */
-.tg-login-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  margin-top: 4px;
-}
-.tg-login-divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  max-width: 340px;
-  color: var(--text3);
-  font-size: 0.82rem;
-}
-.tg-login-divider::before,
-.tg-login-divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-}
-.tg-widget-container {
-  display: flex;
-  justify-content: center;
-  min-height: 44px;
-}
-.tg-login-status {
-  font-size: 0.82rem;
-  color: var(--text2);
-}
-.tg-login-error {
-  font-size: 0.82rem;
-  color: var(--danger);
-}
-
-/* ── Telegram admin setup styles ───────────────────────────── */
+/* ── Telegram admin setup styles (kept for admin panel) ─────── */
 .tg-setup-steps {
   background: var(--bg3);
   border: 1px solid var(--border);

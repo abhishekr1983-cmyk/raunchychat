@@ -5,12 +5,8 @@ import { useSiteSettings } from '../contexts/SiteSettingsContext';
 import PrivateChat from '../components/Chat/PrivateChat';
 import IncomingCallModal from '../components/Call/IncomingCallModal';
 import VideoCall from '../components/Call/VideoCall';
-import { COUNTRIES } from '../data/countries';
-import { getStates } from '../data/countryStates';
 import { getFlag } from '../utils/flags';
 import { useNavigate } from 'react-router-dom';
-
-const GENDERS = ['Male', 'Female', 'Non-binary', 'Prefer not to say'];
 
 function getAvatarColor(gender) {
   if (gender === 'Female') return 'var(--avatar-female, #e91e8c)';
@@ -28,20 +24,12 @@ export default function Chat() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [unread, setUnread] = useState({});
   const [callState, setCallState] = useState(null);
-  const [showFilters, setShowFilters] = useState(false);
   const [search, setSearch] = useState('');
+  const [genderTab, setGenderTab] = useState('All'); // 'All' | 'Male' | 'Female'
   const [recentlyJoined, setRecentlyJoined] = useState(new Set());
   const recentTimers = useRef({});
   // Stable per-session shuffle: map userId → random sort key assigned on first sight
   const userOrderMap = useRef(new Map());
-
-  // Filters
-  const [filterGender, setFilterGender] = useState('');
-  const [filterCountry, setFilterCountry] = useState('');
-  const [filterState, setFilterState] = useState('');
-  const [filterAgeMin, setFilterAgeMin] = useState(18);
-  const [filterAgeMax, setFilterAgeMax] = useState(99);
-  const filterStates = getStates(filterCountry);
 
   // Socket events — handlers
   useEffect(() => {
@@ -117,17 +105,9 @@ export default function Chat() {
     return allUsers
       .filter((u) => u.id !== user?.id)
       .filter((u) => !search || u.username.toLowerCase().includes(search.toLowerCase()))
-      .filter((u) => !filterGender || u.gender === filterGender)
-      .filter((u) => !filterCountry || u.country === filterCountry)
-      .filter((u) => !filterState || u.state === filterState)
-      .filter((u) => u.age >= filterAgeMin && u.age <= filterAgeMax)
+      .filter((u) => genderTab === 'All' || u.gender === genderTab)
       .sort((a, b) => (userOrderMap.current.get(a.id) ?? 0) - (userOrderMap.current.get(b.id) ?? 0));
-  }, [allUsers, user, search, filterGender, filterCountry, filterState, filterAgeMin, filterAgeMax]);
-
-  const resetFilters = () => {
-    setFilterGender(''); setFilterCountry(''); setFilterState('');
-    setFilterAgeMin(18); setFilterAgeMax(99); setSearch('');
-  };
+  }, [allUsers, user, search, genderTab]);
 
   const openChat = useCallback((u) => {
     setSelectedUser(u);
@@ -153,7 +133,6 @@ export default function Chat() {
     setCallState(null);
   }, [socket, callState]);
 
-  const hasFilters = filterGender || filterCountry || filterState || filterAgeMin !== 18 || filterAgeMax !== 99;
   const others = allUsers.filter((u) => u.id !== user?.id);
 
   return (
@@ -197,7 +176,7 @@ export default function Chat() {
 
       {/* ── Left: User list panel ── */}
       <aside className="user-list-panel">
-        {/* Search + filter toggle */}
+        {/* Search box */}
         <div className="ulp-search-row">
           <input
             className="ulp-search"
@@ -205,66 +184,20 @@ export default function Chat() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <button
-            className={`ulp-filter-btn ${showFilters ? 'active' : ''} ${hasFilters ? 'has-dot' : ''}`}
-            onClick={() => setShowFilters((v) => !v)}
-            title="Filters"
-          >
-            ⚙
-          </button>
         </div>
 
-        {/* Collapsible filter panel */}
-        {showFilters && (
-          <div className="ulp-filters">
-            <div className="ulf-row">
-              <label className="ulf-label">Gender</label>
-              <select className="ulf-select" value={filterGender}
-                onChange={(e) => setFilterGender(e.target.value)}>
-                <option value="">Any</option>
-                {GENDERS.map((g) => <option key={g}>{g}</option>)}
-              </select>
-            </div>
-            <div className="ulf-row">
-              <label className="ulf-label">Country</label>
-              <select className="ulf-select" value={filterCountry}
-                onChange={(e) => { setFilterCountry(e.target.value); setFilterState(''); }}>
-                <option value="">Any</option>
-                {COUNTRIES.map((c) => <option key={c}>{c}</option>)}
-              </select>
-            </div>
-            {filterCountry && (
-              <div className="ulf-row">
-                <label className="ulf-label">State</label>
-                {filterStates ? (
-                  <select className="ulf-select" value={filterState}
-                    onChange={(e) => setFilterState(e.target.value)}>
-                    <option value="">Any</option>
-                    {filterStates.map((s) => <option key={s}>{s}</option>)}
-                  </select>
-                ) : (
-                  <input className="ulf-select" placeholder="Any"
-                    value={filterState} onChange={(e) => setFilterState(e.target.value)} />
-                )}
-              </div>
-            )}
-            <div className="ulf-row">
-              <label className="ulf-label">Age</label>
-              <div className="ulf-age">
-                <input type="number" className="ulf-age-input" value={filterAgeMin}
-                  min={18} max={filterAgeMax}
-                  onChange={(e) => setFilterAgeMin(Number(e.target.value))} />
-                <span>–</span>
-                <input type="number" className="ulf-age-input" value={filterAgeMax}
-                  min={filterAgeMin} max={99}
-                  onChange={(e) => setFilterAgeMax(Number(e.target.value))} />
-              </div>
-            </div>
-            {hasFilters && (
-              <button className="ulf-reset" onClick={resetFilters}>Reset filters</button>
-            )}
-          </div>
-        )}
+        {/* Gender filter tabs */}
+        <div className="ulp-gender-tabs">
+          {['All', 'Male', 'Female'].map((tab) => (
+            <button
+              key={tab}
+              className={`ulp-gender-tab ${genderTab === tab ? 'active' : ''}`}
+              onClick={() => setGenderTab(tab)}
+            >
+              {tab === 'Male' ? '♂ Men' : tab === 'Female' ? '♀ Women' : 'All'}
+            </button>
+          ))}
+        </div>
 
         {/* Online count bar */}
         <div className="ulp-count">
@@ -283,11 +216,11 @@ export default function Chat() {
             filteredUsers.map((u) => {
               const unreadCount = unread[u.id] || 0;
               const isActive = selectedUser?.id === u.id;
-              const isNew = recentlyJoined.has(u.id) && u.id > 0; // only real users get animation
+              const isNew = recentlyJoined.has(u.id) && u.id > 0;
               return (
                 <div
                   key={u.id}
-                  className={`ulp-item ${isActive ? 'active' : ''} ${isNew ? 'new-join' : ''}`}
+                  className={`ulp-item gender-${(u.gender || 'other').toLowerCase()} ${isActive ? 'active' : ''} ${isNew ? 'new-join' : ''}`}
                   onClick={() => openChat(u)}
                 >
                   <div
@@ -301,13 +234,12 @@ export default function Chat() {
                     <div className="ulp-name">
                       {u.isAdmin && <span className="ulp-crown" title="Admin">👑</span>}
                       {u.username}
-                      {unreadCount > 0 && <span className="ulp-badge">{unreadCount}</span>}
                     </div>
-                    <div className="ulp-meta">{u.age} Yrs, {u.state}, {u.country}</div>
+                    <div className="ulp-meta">{u.age} · {u.state}, {u.country}</div>
                   </div>
                   <div className="ulp-right">
-                    {isNew && <span className="ulp-new-tag">NEW</span>}
                     <span className="ulp-flag">{getFlag(u.country)}</span>
+                    {unreadCount > 0 && <span className="ulp-badge">{unreadCount}</span>}
                   </div>
                 </div>
               );
