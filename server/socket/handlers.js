@@ -20,6 +20,13 @@ function roomOnlineCount() { return roomUsers.get(GLOBAL_ROOM)?.size ?? 0; }
 // Tracks consecutive unanswered messages: `${senderId}-${receiverId}` -> count
 const pendingCounts = new Map();
 
+// Conference rooms: code → { name, creatorId, members: Map<socketId, userObj> }
+const confRooms = new Map();
+
+function generateRoomCode() {
+  return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
 function pendingKey(a, b) { return `${a}-${b}`; }
 
 // ── Word filter ────────────────────────────────────────────────
@@ -477,6 +484,83 @@ function setupSocketHandlers(io) {
       socket.emit('bots-status', { active: activeCount > 0, count: activeCount });
     });
 
+    // ── Conference rooms ────────────────────────────────────────
+
+    socket.on('create-conference', ({ name }) => {
+      const user = socketToUser.get(socket.id);
+      if (!user) return;
+
+      // Generate unique code
+      let code;
+      do { code = generateRoomCode(); } while (confRooms.has(code));
+
+      const roomName = (name || `${user.username}'s Room`).slice(0, 50);
+      confRooms.set(code, {
+        name: roomName,
+        creatorId: user.id,
+        members: new Map([[socket.id, user]]),
+      });
+
+      socket.join(`conf:${code}`);
+      socket.emit('conference-created', { code, name: roomName });
+      console.log(`[conf] ${user.username} created room ${code}`);
+    });
+
+    socket.on('join-conference', ({ code }) => {
+      const user = socketToUser.get(socket.id);
+      if (!user) return;
+
+      const room = confRooms.get(code?.toUpperCase());
+      if (!room) return socket.emit('conf-error', 'Room not found. Check the code and try again.');
+      if (room.members.size >= 5) return socket.emit('conf-error', 'Room is full (maximum 5 participants).');
+      if (room.members.has(socket.id)) return socket.emit('conf-error', 'Already in this room.');
+
+      socket.join(`conf:${code}`);
+      room.members.set(socket.id, user);
+
+      // Notify existing members that a new peer joined
+      socket.to(`conf:${code}`).emit('conf-peer-joined', {
+        socketId: socket.id,
+        userId: user.id,
+        username: user.username,
+        gender: user.gender,
+      });
+
+      // Send current member list to new joiner
+      const memberList = [...room.members.entries()]
+        .filter(([sid]) => sid !== socket.id)
+        .map(([sid, u]) => ({ socketId: sid, userId: u.id, username: u.username, gender: u.gender }));
+
+      socket.emit('conference-joined', { code, name: room.name, members: memberList });
+      console.log(`[conf] ${user.username} joined room ${code} (${room.members.size}/5)`);
+    });
+
+    socket.on('leave-conference', ({ code }) => {
+      const user = socketToUser.get(socket.id);
+      if (!user) return;
+      const room = confRooms.get(code);
+      if (room) {
+        room.members.delete(socket.id);
+        if (room.members.size === 0) {
+          confRooms.delete(code);
+          console.log(`[conf] Room ${code} closed (empty)`);
+        }
+      }
+      socket.leave(`conf:${code}`);
+      io.to(`conf:${code}`).emit('conf-peer-left', { socketId: socket.id });
+    });
+
+    // WebRTC signaling for conference
+    socket.on('conf-offer', ({ targetSocketId, offer }) => {
+      io.to(targetSocketId).emit('conf-offer', { fromSocketId: socket.id, offer });
+    });
+    socket.on('conf-answer', ({ targetSocketId, answer }) => {
+      io.to(targetSocketId).emit('conf-answer', { fromSocketId: socket.id, answer });
+    });
+    socket.on('conf-ice', ({ targetSocketId, candidate }) => {
+      io.to(targetSocketId).emit('conf-ice', { fromSocketId: socket.id, candidate });
+    });
+
     // ── Disconnect ─────────────────────────────────────────────
 
     socket.on('disconnect', () => {
@@ -493,6 +577,14 @@ function setupSocketHandlers(io) {
         }
       });
       io.emit('online-count', roomOnlineCount());
+      // Clean up conference rooms
+      confRooms.forEach((room, code) => {
+        if (room.members.has(socket.id)) {
+          room.members.delete(socket.id);
+          io.to(`conf:${code}`).emit('conf-peer-left', { socketId: socket.id });
+          if (room.members.size === 0) confRooms.delete(code);
+        }
+      });
     });
   });
 }

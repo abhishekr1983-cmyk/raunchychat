@@ -47,6 +47,7 @@ router.put('/settings', requireAdmin, async (req, res) => {
       'ga_tracking_id', 'custom_head_code', 'custom_body_code',
       'auto_block_threshold',
       'telegram_bot_username', 'telegram_bot_token', 'telegram_channel_link',
+      'google_client_id',
     ];
     for (const [key, value] of Object.entries(req.body)) {
       if (!allowed.includes(key)) continue;

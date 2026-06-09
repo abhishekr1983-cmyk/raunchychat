@@ -20,6 +20,39 @@ export default function Landing() {
   const [guestError, setGuestError] = useState('');
   const [guestLoading, setGuestLoading] = useState(false);
 
+  const googleClientId = settings.google_client_id?.trim();
+
+  useEffect(() => {
+    if (!googleClientId) return;
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      window.google?.accounts?.id?.initialize({
+        client_id: googleClientId,
+        callback: async ({ credential }) => {
+          try {
+            const res = await fetch('/api/auth/google', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ credential }),
+            });
+            const data = await res.json();
+            if (!res.ok) { setGuestError(data.error || 'Google sign-in failed'); return; }
+            login(data.token, data.user);
+          } catch { setGuestError('Google sign-in failed'); }
+        },
+      });
+      window.google?.accounts?.id?.renderButton(
+        document.getElementById('g_id_signin'),
+        { theme: 'outline', size: 'large', width: 360, text: 'continue_with' }
+      );
+    };
+    document.body.appendChild(script);
+    return () => { document.body.removeChild(script); };
+  }, [googleClientId]);
+
   // Fetch live online count on mount + refresh every 30s
   useEffect(() => {
     const load = () =>
@@ -162,6 +195,13 @@ export default function Landing() {
           </form>
 
           <p className="cb-disclaimer">🔞 Adults 18+ only · Guest sessions expire in 24h</p>
+
+          {googleClientId && (
+            <div className="cb-google-divider">
+              <span>or</span>
+            </div>
+          )}
+          {googleClientId && <div id="g_id_signin" className="cb-google-btn" />}
         </div>
       </div>
 

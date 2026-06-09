@@ -364,12 +364,13 @@ function ModerationTab({ token, threshold, onThresholdSaved }) {
   );
 }
 
-// ── Integrations tab (Telegram) ────────────────────────────────
+// ── Integrations tab (Telegram + Google) ──────────────────────
 function IntegrationsTab({ token, settings, updateSettings }) {
   const [form, setForm] = useState({
     telegram_bot_username: settings.telegram_bot_username || '',
     telegram_bot_token: '',       // loaded separately
     telegram_channel_link: settings.telegram_channel_link || '',
+    google_client_id: settings.google_client_id || '',
   });
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
@@ -392,15 +393,16 @@ function IntegrationsTab({ token, settings, updateSettings }) {
       ...p,
       telegram_bot_username: settings.telegram_bot_username || '',
       telegram_channel_link: settings.telegram_channel_link || '',
+      google_client_id: settings.google_client_id || '',
     }));
-  }, [settings.telegram_bot_username, settings.telegram_channel_link]);
+  }, [settings.telegram_bot_username, settings.telegram_channel_link, settings.google_client_id]);
 
   const save = async (e) => {
     e.preventDefault();
     setMsg(''); setErr('');
     try {
       await updateSettings(form, token);
-      setMsg('Telegram settings saved ✓');
+      setMsg('Integration settings saved ✓');
       setTimeout(() => setMsg(''), 3000);
     } catch (ex) { setErr(ex.message); }
   };
@@ -460,8 +462,27 @@ function IntegrationsTab({ token, settings, updateSettings }) {
             <span className="admin-field-hint">Optional — shows a "Join our Telegram" banner on the landing page.</span>
           </div>
 
+          <div className="admin-section-header" style={{ marginTop: 8, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+            <span className="admin-section-icon">🔵</span>
+            <span className="admin-section-title">Google Sign-In</span>
+          </div>
+
+          <div className="admin-field">
+            <label>Google OAuth Client ID</label>
+            <input
+              value={form.google_client_id}
+              onChange={(e) => setForm((p) => ({ ...p, google_client_id: e.target.value }))}
+              placeholder="123456789-abc…apps.googleusercontent.com"
+              maxLength={200}
+              autoComplete="off"
+            />
+            <span className="admin-field-hint">
+              Create a project at <strong>console.cloud.google.com</strong>, enable the Google Identity API, create an OAuth 2.0 Client ID (Web application), and paste the Client ID here. Leave blank to hide the Google Sign-In button.
+            </span>
+          </div>
+
           <div className="admin-save-row">
-            <button type="submit" className="btn btn-primary">Save Telegram Settings</button>
+            <button type="submit" className="btn btn-primary">Save Integration Settings</button>
             {msg && <span className="admin-save-msg">{msg}</span>}
             {err && <span className="admin-save-err">{err}</span>}
           </div>
@@ -499,6 +520,19 @@ function IntegrationsTab({ token, settings, updateSettings }) {
                   {settings.telegram_channel_link
                     ? `Shown — ${settings.telegram_channel_link}`
                     : 'Not configured — add a channel link to show banner'}
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: '1.1rem' }}>
+                {settings.google_client_id ? '✅' : '⭕'}
+              </span>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>Google Sign-In</div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text2)' }}>
+                  {settings.google_client_id
+                    ? 'Active — Google Sign-In button shown on landing page'
+                    : 'Not configured — set Google Client ID to enable'}
                 </div>
               </div>
             </div>

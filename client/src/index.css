@@ -1337,6 +1337,82 @@ a { color: var(--accent); text-decoration: none; }
   gap: 4px;
 }
 
+/* ── Conference room overlay ───────────────────────────────── */
+.conf-overlay {
+  position: fixed; inset: 0; z-index: 300;
+  background: #0a0c12;
+  display: flex; flex-direction: column;
+}
+.conf-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 20px; background: #13151c; border-bottom: 1px solid #2a2d3a;
+  flex-shrink: 0; gap: 16px; flex-wrap: wrap;
+}
+.conf-room-info { display: flex; align-items: center; gap: 10px; }
+.conf-room-name { font-size: 1rem; font-weight: 700; color: #e8eaf0; }
+.conf-member-count { font-size: 0.8rem; background: rgba(24,119,242,0.2); color: #4fc3f7; border-radius: 20px; padding: 2px 10px; }
+.conf-code-row { display: flex; align-items: center; gap: 8px; }
+.conf-code-label { font-size: 0.78rem; color: #9ea3b4; }
+.conf-code-val { font-size: 1rem; font-weight: 700; letter-spacing: 0.15em; color: #e8eaf0; font-family: monospace; }
+.conf-copy-btn { padding: 4px 12px; background: rgba(24,119,242,0.15); border: 1px solid rgba(24,119,242,0.4); border-radius: 6px; color: #4fc3f7; font-size: 0.78rem; font-weight: 600; cursor: pointer; }
+.conf-copy-btn:hover { background: rgba(24,119,242,0.25); }
+.conf-media-warn { background: rgba(255,152,0,0.1); border-bottom: 1px solid rgba(255,152,0,0.3); color: #ffb74d; font-size: 0.82rem; padding: 6px 20px; flex-shrink: 0; }
+
+/* Video grid */
+.conf-grid { flex: 1; display: grid; gap: 4px; padding: 8px; overflow: hidden; }
+.conf-n1 { grid-template-columns: 1fr; }
+.conf-n2 { grid-template-columns: 1fr 1fr; }
+.conf-n3 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+.conf-n3 .conf-tile:first-child { grid-column: 1 / -1; }
+.conf-n4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+.conf-n5 { grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr; }
+.conf-n5 .conf-tile:nth-child(4), .conf-n5 .conf-tile:nth-child(5) { grid-column: span 1; }
+
+.conf-tile {
+  position: relative; background: #13151c; border-radius: 8px;
+  overflow: hidden; display: flex; align-items: center; justify-content: center;
+}
+.conf-video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.conf-avatar-wrap { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
+.conf-avatar {
+  width: 80px; height: 80px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem; font-weight: 700; color: #fff;
+}
+.conf-tile-name {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(transparent, rgba(0,0,0,0.7));
+  color: #fff; font-size: 0.8rem; font-weight: 600;
+  padding: 20px 10px 8px; text-align: center;
+}
+
+/* Controls */
+.conf-controls {
+  display: flex; align-items: center; justify-content: center; gap: 16px;
+  padding: 16px; background: #13151c; border-top: 1px solid #2a2d3a; flex-shrink: 0;
+}
+.conf-ctrl-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  background: #22252f; border: none; border-radius: 12px;
+  padding: 12px 20px; color: #e8eaf0; cursor: pointer;
+  font-size: 1.2rem; transition: background 0.15s; min-width: 80px;
+}
+.conf-ctrl-btn span { font-size: 0.7rem; font-weight: 600; }
+.conf-ctrl-btn:hover { background: #2d3240; }
+.conf-ctrl-btn.off { background: rgba(229,57,53,0.15); color: #ef9a9a; }
+.conf-leave { background: rgba(229,57,53,0.8) !important; color: #fff !important; }
+.conf-leave:hover { background: #e53935 !important; }
+
+/* Conference header buttons */
+.conf-create-btn { background: var(--accent); color: #fff; }
+.conf-create-btn:hover { background: var(--accent-hover); }
+.conf-active-btn { background: rgba(229,57,53,0.15); color: #e53935; border: 1px solid rgba(229,57,53,0.3); border-radius: 8px; }
+
+/* Google sign-in */
+.cb-google-divider { display: flex; align-items: center; gap: 12px; color: var(--text3); font-size: 0.82rem; }
+.cb-google-divider::before, .cb-google-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.cb-google-btn { display: flex; justify-content: center; }
+
 /* ── Scrollbar ─────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

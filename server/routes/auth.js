@@ -110,6 +110,48 @@ router.post('/guest', async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
 });
 
+// ── Google Sign-In ─────────────────────────────────────────────
+router.post('/google', async (req, res) => {
+  try {
+    const { credential } = req.body;
+    if (!credential) return res.status(400).json({ error: 'Missing credential' });
+
+    // Verify token with Google
+    const gRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
+    const payload = await gRes.json();
+    if (payload.error || !payload.email) return res.status(401).json({ error: 'Invalid Google token' });
+
+    const { email, name, sub: googleId } = payload;
+    // derive username from name, max 24 chars, alphanumeric+underscore
+    let username = (name || email.split('@')[0]).replace(/[^a-zA-Z0-9_]/g, '').slice(0, 20) || 'user';
+
+    // find by google_id or email
+    let row = (await client.execute({ sql: 'SELECT * FROM users WHERE google_id = ? OR (email = ? AND is_guest = 0)', args: [googleId, email] })).rows[0];
+
+    if (!row) {
+      // ensure unique username
+      let finalUsername = username;
+      const existing = (await client.execute({ sql: 'SELECT id FROM users WHERE username = ?', args: [finalUsername] })).rows[0];
+      if (existing) finalUsername = `${username.slice(0,18)}_${Math.floor(Math.random()*99)}`;
+
+      const result = await client.execute({
+        sql: `INSERT INTO users (username, email, gender, age, state, country, is_guest, is_admin, google_id)
+              VALUES (?, ?, 'Prefer not to say', 25, 'N/A', 'International', 0, 0, ?)`,
+        args: [finalUsername, email, googleId],
+      });
+      row = (await client.execute({ sql: 'SELECT * FROM users WHERE id = ?', args: [Number(result.lastInsertRowid)] })).rows[0];
+    } else if (!row.google_id) {
+      await client.execute({ sql: 'UPDATE users SET google_id = ? WHERE id = ?', args: [googleId, Number(row.id)] });
+    }
+
+    const token = jwt.sign({ userId: Number(row.id) }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token, user: safeUser(row) });
+  } catch (err) {
+    console.error('[google-auth]', err.message);
+    res.status(500).json({ error: 'Google authentication failed' });
+  }
+});
+
 // ── Telegram Login ─────────────────────────────────────────────
 router.post('/telegram', async (req, res) => {
   try {

@@ -32,6 +32,7 @@ async function initDB() {
     'ALTER TABLE users ADD COLUMN violation_count INTEGER DEFAULT 0',
     'ALTER TABLE users ADD COLUMN telegram_id INTEGER',
     'ALTER TABLE users ADD COLUMN telegram_username TEXT',
+    'ALTER TABLE users ADD COLUMN google_id TEXT',
   ];
   for (const sql of migrations) {
     try { await client.execute(sql); } catch { /* column already exists — fine */ }
@@ -119,6 +120,7 @@ async function initDB() {
     ['telegram_bot_username', ''],
     ['telegram_bot_token', ''],      // private — never exposed via public API
     ['telegram_channel_link', ''],
+    ['google_client_id', ''],
   ];
   for (const [key, value] of defaults) {
     try {
