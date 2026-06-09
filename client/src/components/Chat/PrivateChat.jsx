@@ -56,15 +56,17 @@ export default function PrivateChat({ peer, socket, currentUser, onClose, onCall
 
   // ── Message history + socket events ──────────────────────────
   useEffect(() => {
-    // For bots: load history from sessionStorage immediately
     if (isBot(peer.id)) {
+      // Bots: load from sessionStorage only — server has no DB history for them
       setMessages(loadBotHistory(currentUser.id, peer.id));
+    } else {
+      // Real users: ask server for DB history
+      socket.emit('open-conversation', { withUserId: peer.id });
     }
 
-    socket.emit('open-conversation', { withUserId: peer.id });
-
     const handleHistory = ({ withUserId, messages: msgs, pendingCount: pc }) => {
-      if (withUserId !== peer.id) return;
+      // withUserId from server is whatever we sent (a Number), peer.id is also Number
+      if (Number(withUserId) !== Number(peer.id)) return;
       setMessages(msgs);
       setPendingCount(pc);
     };

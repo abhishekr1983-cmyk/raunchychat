@@ -157,12 +157,8 @@ function setupSocketHandlers(io) {
       const user = socketToUser.get(socket.id);
       if (!user) return;
 
-      // Bot IDs are negative — no DB rows exist, return empty history
-      if (withUserId < 0) {
-        const myPending = pendingCounts.get(pendingKey(user.id, withUserId)) || 0;
-        socket.emit('conversation-history', { withUserId, messages: [], pendingCount: myPending });
-        return;
-      }
+      // Bot IDs are negative — client loads from sessionStorage, nothing to do here
+      if (withUserId < 0) return;
 
       const result = await client.execute({
         sql: `
@@ -178,10 +174,20 @@ function setupSocketHandlers(io) {
         args: [user.id, withUserId, withUserId, user.id],
       });
 
+      // Convert BigInt values to Number so socket.io can serialize them
+      const messages = result.rows.map((row) => ({
+        id:          Number(row.id),
+        sender_id:   Number(row.sender_id),
+        receiver_id: Number(row.receiver_id),
+        content:     row.content,
+        created_at:  row.created_at,
+        sender_name: row.sender_name,
+      }));
+
       const myPending = pendingCounts.get(pendingKey(user.id, withUserId)) || 0;
       socket.emit('conversation-history', {
         withUserId,
-        messages: result.rows,
+        messages,
         pendingCount: myPending,
       });
     });
