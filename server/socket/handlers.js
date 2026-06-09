@@ -187,8 +187,11 @@ function setupSocketHandlers(io) {
     });
 
     socket.on('private-message', async ({ toUserId, content }) => {
+      try {
       const sender = socketToUser.get(socket.id);
       if (!sender || !content?.trim()) return;
+
+      console.log(`[msg] ${sender.username}(${sender.id}) → ${toUserId}: "${content?.slice(0,40)}"`);
 
       // Check if sender account is blocked in DB (could have been blocked mid-session)
       const senderRow = (await client.execute({
@@ -293,6 +296,12 @@ function setupSocketHandlers(io) {
       // Signal both sides to refresh their recent-chats list
       socket.emit('refresh-recent-chats');
       if (targetSocketId) io.to(targetSocketId).emit('refresh-recent-chats');
+      console.log(`[msg] saved id=${message.id}`);
+
+      } catch (err) {
+        console.error('[private-message] ERROR:', err.message, err.stack);
+        socket.emit('error', { message: 'Failed to send message' });
+      }
     });
 
     // ── Call signaling ─────────────────────────────────────────

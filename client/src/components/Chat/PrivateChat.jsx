@@ -4,6 +4,17 @@ import { getAvatarStyle, getInitial } from '../../utils/avatar';
 import { useSocket } from '../../contexts/SocketContext';
 
 const MAX_PENDING = 3;
+const isBot = (id) => id < 0;
+const botKey = (uid, botId) => `chat_bot_${uid}_${botId}`;
+
+function loadBotHistory(userId, botId) {
+  try { return JSON.parse(sessionStorage.getItem(botKey(userId, botId)) || '[]'); }
+  catch { return []; }
+}
+function saveBotHistory(userId, botId, msgs) {
+  try { sessionStorage.setItem(botKey(userId, botId), JSON.stringify(msgs.slice(-200))); }
+  catch { /* storage full */ }
+}
 
 function formatTime(iso) {
   return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -45,6 +56,11 @@ export default function PrivateChat({ peer, socket, currentUser, onClose, onCall
 
   // ── Message history + socket events ──────────────────────────
   useEffect(() => {
+    // For bots: load history from sessionStorage immediately
+    if (isBot(peer.id)) {
+      setMessages(loadBotHistory(currentUser.id, peer.id));
+    }
+
     socket.emit('open-conversation', { withUserId: peer.id });
 
     const handleHistory = ({ withUserId, messages: msgs, pendingCount: pc }) => {
@@ -61,13 +77,15 @@ export default function PrivateChat({ peer, socket, currentUser, onClose, onCall
 
       setMessages((prev) => {
         if (prev.some((m) => m.id === msg.id)) return prev;
-        return [...prev, msg];
+        const next = [...prev, msg];
+        // Persist bot conversations in sessionStorage
+        if (isBot(peer.id)) saveBotHistory(currentUser.id, peer.id, next);
+        return next;
       });
 
       if (msg.sender_id === peer.id) {
         setPendingCount(0);
         setPeerTyping(false);
-        // Notify if tab is hidden
         if (document.hidden) {
           playPing();
           document.title = `💬 ${peer.username} sent a message`;
