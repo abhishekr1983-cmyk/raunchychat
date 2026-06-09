@@ -2,10 +2,10 @@ import { createContext, useContext, useEffect, useState } from 'react';
 
 export const THEMES = {
   'dark-seduction': {
-    name: 'Dark Seduction',
-    emoji: '🖤',
-    swatch: '#3b82f6',
-    desc: 'Classic deep navy',
+    name: 'Chatib Style',
+    emoji: '💬',
+    swatch: '#00c5d8',
+    desc: 'Dark charcoal + teal',
   },
   'red-hot': {
     name: 'Red Hot',
