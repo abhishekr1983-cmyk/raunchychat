@@ -47,12 +47,18 @@ export default function Landing() {
         body: JSON.stringify({ username: nickname.trim(), gender, age: Number(age), state: 'N/A', country }),
       });
       const data = await res.json();
-      if (!res.ok) { setGuestError(data.error || 'Could not start session'); return; }
+      if (!res.ok) {
+        setGuestError(data.error || 'Could not start session');
+        // Clear nickname so user can pick a different one
+        if (res.status === 409) setNickname('');
+        return;
+      }
       login(data.token, data.user);
     } catch {
       setGuestError('Server error, please try again');
+    } finally {
+      setGuestLoading(false);
     }
-    setGuestLoading(false);
   };
 
   return (
