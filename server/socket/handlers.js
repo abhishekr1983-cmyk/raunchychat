@@ -495,13 +495,9 @@ function setupSocketHandlers(io) {
       do { code = generateRoomCode(); } while (confRooms.has(code));
 
       const roomName = (name || `${user.username}'s Room`).slice(0, 50);
-      confRooms.set(code, {
-        name: roomName,
-        creatorId: user.id,
-        members: new Map([[socket.id, user]]),
-      });
+      // Room starts empty — creator joins from the new tab via join-conference
+      confRooms.set(code, { name: roomName, creatorId: user.id, members: new Map() });
 
-      socket.join(`conf:${code}`);
       socket.emit('conference-created', { code, name: roomName });
       console.log(`[conf] ${user.username} created room ${code}`);
     });

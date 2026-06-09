@@ -1337,6 +1337,27 @@ a { color: var(--accent); text-decoration: none; }
   gap: 4px;
 }
 
+/* ── Conference page — loading / error state ───────────────── */
+.conf-page-state {
+  min-height: 100vh; background: #0a0c12;
+  display: flex; align-items: center; justify-content: center;
+}
+.conf-page-card {
+  background: #13151c; border: 1px solid #2a2d3a; border-radius: 16px;
+  padding: 40px 36px; width: min(380px, 94vw);
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  text-align: center; color: #e8eaf0;
+}
+.conf-page-icon { font-size: 3rem; }
+.conf-page-card h2 { font-size: 1.3rem; font-weight: 700; }
+.conf-page-msg { color: #9ea3b4; font-size: 0.92rem; line-height: 1.6; }
+.conf-spinner {
+  width: 40px; height: 40px; border-radius: 50%;
+  border: 3px solid #2a2d3a; border-top-color: #1877f2;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
 /* ── Conference room overlay ───────────────────────────────── */
 .conf-overlay {
   position: fixed; inset: 0; z-index: 300;

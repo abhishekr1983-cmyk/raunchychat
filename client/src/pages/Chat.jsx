@@ -5,7 +5,6 @@ import { useSiteSettings } from '../contexts/SiteSettingsContext';
 import PrivateChat from '../components/Chat/PrivateChat';
 import IncomingCallModal from '../components/Call/IncomingCallModal';
 import VideoCall from '../components/Call/VideoCall';
-import Conference from '../components/Conference';
 import { getFlag } from '../utils/flags';
 import { getAvatarStyle, getInitial } from '../utils/avatar';
 import { useNavigate } from 'react-router-dom';
@@ -20,7 +19,6 @@ export default function Chat() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [unread, setUnread] = useState({});
   const [callState, setCallState] = useState(null);
-  const [confState, setConfState] = useState(null); // null | { code, name, members }
   const [showConfJoin, setShowConfJoin] = useState(false);
   const [confCode, setConfCode] = useState('');
   const [confErr, setConfErr] = useState('');
@@ -86,15 +84,10 @@ export default function Chat() {
     socket.on('call-rejected', handleCallRejected);
     socket.on('call-ended', handleCallEnded);
     socket.on('call-error', handleCallError);
-    socket.on('conference-created', ({ code, name }) => {
-      setConfState({ code, name, members: [] });
+    socket.on('conference-created', ({ code }) => {
+      window.open(`/conference/${code}`, '_blank');
     });
-    socket.on('conference-joined', ({ code, name, members }) => {
-      setConfState({ code, name, members });
-      setShowConfJoin(false);
-      setConfErr('');
-    });
-    socket.on('conf-error', (msg) => setConfErr(typeof msg === 'string' ? msg : msg.message || 'Error'));
+    socket.on('conf-error', (msg) => setConfErr(typeof msg === 'string' ? msg : msg?.message || 'Error'));
 
     return () => {
       socket.off('room-users', handleRoomUsers);
@@ -107,7 +100,6 @@ export default function Chat() {
       socket.off('call-ended', handleCallEnded);
       socket.off('call-error', handleCallError);
       socket.off('conference-created');
-      socket.off('conference-joined');
       socket.off('conf-error');
     };
   }, [socket]);
@@ -173,10 +165,13 @@ export default function Chat() {
   }, [socket, user]);
 
   const joinConference = useCallback(() => {
-    if (!socket || !confCode.trim()) return;
+    const c = confCode.trim().toUpperCase();
+    if (!c || c.length < 4) { setConfErr('Please enter a valid room code'); return; }
+    window.open(`/conference/${c}`, '_blank');
+    setShowConfJoin(false);
+    setConfCode('');
     setConfErr('');
-    socket.emit('join-conference', { code: confCode.trim().toUpperCase() });
-  }, [socket, confCode]);
+  }, [confCode]);
 
   const others = allUsers.filter((u) => u.id !== user?.id);
 
@@ -212,21 +207,12 @@ export default function Chat() {
             <span className="user-name">{user?.username}</span>
             {user?.isGuest && <span className="guest-badge">Guest</span>}
           </div>
-          {!confState && (
-            <>
-              <button className="btn btn-sm conf-create-btn" onClick={createConference} title="Create conference room">
-                📹 Create Room
-              </button>
-              <button className="btn btn-ghost btn-sm" onClick={() => { setShowConfJoin(true); setConfErr(''); setConfCode(''); }} title="Join conference room">
-                🔗 Join Room
-              </button>
-            </>
-          )}
-          {confState && (
-            <button className="btn btn-sm conf-active-btn" onClick={() => {}}>
-              🔴 In Room ({confState.members.length + 1}/5)
-            </button>
-          )}
+          <button className="btn btn-sm conf-create-btn" onClick={createConference} title="Create conference room">
+            📹 Create Room
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={() => { setShowConfJoin(true); setConfErr(''); setConfCode(''); }} title="Join conference room">
+            🔗 Join Room
+          </button>
           {user?.isAdmin && (
             <button className="btn btn-ghost btn-sm" onClick={() => navigate('/admin')} title="Admin Panel">⚙ Admin</button>
           )}
@@ -379,18 +365,6 @@ export default function Chat() {
           isInitiator={callState.isInitiator}
           socket={socket}
           onEnd={() => setCallState(null)}
-        />
-      )}
-
-      {/* Conference overlay */}
-      {confState && (
-        <Conference
-          socket={socket}
-          currentUser={user}
-          initialCode={confState.code}
-          initialName={confState.name}
-          initialMembers={confState.members}
-          onLeave={() => setConfState(null)}
         />
       )}
 

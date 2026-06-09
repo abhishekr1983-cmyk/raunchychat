@@ -5,6 +5,7 @@ import { SiteSettingsProvider } from './contexts/SiteSettingsContext';
 import Landing from './pages/Landing';
 import Chat from './pages/Chat';
 import Admin from './pages/Admin';
+import ConferencePage from './pages/ConferencePage';
 
 function ProtectedRoute({ children }) {
   const { token } = useAuth();
@@ -45,6 +46,8 @@ export default function App() {
             </AdminRoute>
           }
         />
+        {/* Conference room — standalone tab, no SocketProvider needed (creates its own) */}
+        <Route path="/conference/:code" element={<ConferencePage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </SiteSettingsProvider>
