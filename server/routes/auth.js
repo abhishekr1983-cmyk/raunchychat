@@ -1,6 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { client } = require('../db');
 const { JWT_SECRET } = require('../middleware/auth');
 
@@ -17,6 +18,7 @@ function safeUser(row, extra = {}) {
     country: row.country,
     isGuest: row.is_guest === 1,
     isAdmin: row.is_admin === 1,
+    telegramId: row.telegram_id ? Number(row.telegram_id) : null,
     ...extra,
   };
 }
@@ -66,7 +68,6 @@ router.post('/login', async (req, res) => {
     if (row.is_blocked)
       return res.status(403).json({ error: 'Your account has been blocked. Contact support.' });
 
-    // Update last_seen on login
     await client.execute({
       sql: 'UPDATE users SET last_seen = ? WHERE id = ?',
       args: [new Date().toISOString(), Number(row.id)],
@@ -79,21 +80,17 @@ router.post('/login', async (req, res) => {
 
 router.post('/guest', async (req, res) => {
   try {
-    const { username, gender, age, state, country } = req.body;
+    const { username, gender, age, state = 'N/A', country = 'International' } = req.body;
 
-    if (!username || !gender || !age || !state || !country)
-      return res.status(400).json({ error: 'All fields are required' });
+    if (!username || !gender || !age)
+      return res.status(400).json({ error: 'Username, gender and age are required' });
     if (username.length < 3 || username.length > 24)
       return res.status(400).json({ error: 'Username must be 3–24 characters' });
     if (Number(age) < 18 || Number(age) > 120)
       return res.status(400).json({ error: 'Age must be 18 or older' });
 
-    // Resolve real IP (works behind ngrok / reverse proxies with trust proxy enabled)
     const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim()
-      || req.socket?.remoteAddress
-      || req.ip
-      || 'unknown';
-
+      || req.socket?.remoteAddress || req.ip || 'unknown';
     const now = new Date().toISOString();
 
     const existing = (await client.execute({
@@ -111,6 +108,122 @@ router.post('/guest', async (req, res) => {
     const token = jwt.sign({ userId }, JWT_SECRET, { expiresIn: '24h' });
     res.json({ token, user: { id: userId, username, gender, age: Number(age), state, country, isGuest: true, isAdmin: false } });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Server error' }); }
+});
+
+// ── Telegram Login ─────────────────────────────────────────────
+router.post('/telegram', async (req, res) => {
+  try {
+    const data = req.body; // { id, first_name, last_name?, username?, auth_date, hash, ... }
+    if (!data.hash || !data.auth_date || !data.id) {
+      return res.status(400).json({ error: 'Invalid Telegram auth data' });
+    }
+
+    // Load bot token from settings
+    const tokenRow = (await client.execute({
+      sql: "SELECT value FROM site_settings WHERE key = 'telegram_bot_token'",
+      args: [],
+    })).rows[0];
+
+    if (!tokenRow?.value?.trim()) {
+      return res.status(400).json({ error: 'Telegram integration is not configured on this server' });
+    }
+
+    // Verify HMAC-SHA256 signature
+    const { hash, ...rest } = data;
+    const checkString = Object.keys(rest)
+      .sort()
+      .map((k) => `${k}=${rest[k]}`)
+      .join('\n');
+    const secretKey = crypto.createHash('sha256').update(tokenRow.value.trim()).digest();
+    const computed = crypto.createHmac('sha256', secretKey).update(checkString).digest('hex');
+
+    if (computed !== hash) {
+      return res.status(401).json({ error: 'Telegram auth verification failed' });
+    }
+
+    // Reject stale auth (older than 1 hour)
+    if (Date.now() / 1000 - parseInt(data.auth_date) > 3600) {
+      return res.status(401).json({ error: 'Telegram auth data expired, please try again' });
+    }
+
+    const telegramId = Number(data.id);
+    const telegramUsername = (data.username || `tg${telegramId}`).slice(0, 24);
+
+    // Find existing user by telegram_id
+    let row = (await client.execute({
+      sql: 'SELECT * FROM users WHERE telegram_id = ?',
+      args: [telegramId],
+    })).rows[0];
+
+    let isNewUser = false;
+
+    if (!row) {
+      // Generate a unique username
+      let username = telegramUsername;
+      for (let i = 1; i <= 20; i++) {
+        const clash = (await client.execute({
+          sql: 'SELECT id FROM users WHERE username = ?',
+          args: [username],
+        })).rows[0];
+        if (!clash) break;
+        username = `${telegramUsername.slice(0, 21)}_${i}`;
+      }
+
+      const result = await client.execute({
+        sql: `INSERT INTO users
+                (username, gender, age, state, country, is_guest,
+                 telegram_id, telegram_username, last_seen)
+              VALUES (?, 'Prefer not to say', 18, 'Global', 'Global', 0, ?, ?, ?)`,
+        args: [username, telegramId, data.username || null, new Date().toISOString()],
+      });
+
+      row = (await client.execute({
+        sql: 'SELECT * FROM users WHERE id = ?',
+        args: [Number(result.lastInsertRowid)],
+      })).rows[0];
+
+      isNewUser = true;
+      console.log(`[telegram] New user: ${username} (tg_id=${telegramId})`);
+    } else {
+      if (row.is_blocked) {
+        return res.status(403).json({ error: 'Your account has been blocked.' });
+      }
+      await client.execute({
+        sql: 'UPDATE users SET last_seen = ? WHERE id = ?',
+        args: [new Date().toISOString(), Number(row.id)],
+      });
+    }
+
+    const token = jwt.sign({ userId: Number(row.id) }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token, user: safeUser(row), isNewUser });
+  } catch (err) {
+    console.error('[telegram auth]', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ── Profile update (for Telegram users who need to set gender/age/country) ──
+router.put('/profile', async (req, res) => {
+  try {
+    const auth = req.headers.authorization;
+    if (!auth?.startsWith('Bearer ')) return res.status(401).json({ error: 'Not authenticated' });
+    const { userId } = jwt.verify(auth.slice(7), JWT_SECRET);
+
+    const { gender, age, state, country } = req.body;
+    if (!gender || !age || !country) return res.status(400).json({ error: 'gender, age and country are required' });
+    if (Number(age) < 18 || Number(age) > 120) return res.status(400).json({ error: 'Age must be 18–120' });
+
+    await client.execute({
+      sql: 'UPDATE users SET gender = ?, age = ?, state = ?, country = ? WHERE id = ?',
+      args: [gender, Number(age), state || 'N/A', country, Number(userId)],
+    });
+
+    const row = (await client.execute({ sql: 'SELECT * FROM users WHERE id = ?', args: [Number(userId)] })).rows[0];
+    res.json({ user: safeUser(row) });
+  } catch (err) {
+    console.error('[profile update]', err);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 module.exports = router;

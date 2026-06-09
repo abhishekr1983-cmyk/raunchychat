@@ -14,6 +14,8 @@ const DEFAULTS = {
   custom_head_code: '',
   custom_body_code: '',
   auto_block_threshold: '3',
+  telegram_bot_username: '',   // bot token is PRIVATE — never in public settings
+  telegram_channel_link: '',
 };
 
 // Safely inject HTML (including <script> tags) into a DOM container

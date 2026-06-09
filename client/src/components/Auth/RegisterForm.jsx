@@ -8,6 +8,7 @@ export default function RegisterForm({ onSwitch }) {
   const [form, setForm] = useState({
     username: '', email: '', password: '', gender: '', age: '', state: '', country: '',
   });
+  const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -56,7 +57,15 @@ export default function RegisterForm({ onSwitch }) {
         <input type="email" value={form.email} onChange={set('email')} required />
       </label>
       <label>Password
-        <input type="password" value={form.password} onChange={set('password')} minLength={6} required />
+        <div className="pw-wrap">
+          <input
+            type={showPw ? 'text' : 'password'}
+            value={form.password} onChange={set('password')} minLength={6} required
+          />
+          <button type="button" className="pw-eye" onClick={() => setShowPw((v) => !v)} tabIndex={-1}>
+            {showPw ? '🙈' : '👁'}
+          </button>
+        </div>
       </label>
       <div className="form-row">
         <label>Gender

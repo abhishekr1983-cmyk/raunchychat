@@ -4,15 +4,36 @@ const { client } = require('../db');
 const { requireAdmin } = require('../middleware/adminAuth');
 const { kickUser, refreshBlockedWords } = require('../socket/handlers');
 
-// ── Public: get all site settings ─────────────────────────────
+// Keys that are NEVER returned via the public settings endpoint
+const PRIVATE_SETTINGS = ['telegram_bot_token'];
+
+// ── Public: get site settings (excludes private keys) ─────────
 router.get('/settings', async (req, res) => {
   try {
     const result = await client.execute('SELECT key, value FROM site_settings');
     const settings = {};
-    for (const row of result.rows) settings[row.key] = row.value;
+    for (const row of result.rows) {
+      if (!PRIVATE_SETTINGS.includes(row.key)) settings[row.key] = row.value;
+    }
     res.json(settings);
   } catch {
     res.status(500).json({ error: 'Failed to load settings' });
+  }
+});
+
+// ── Admin: get private settings (bot token etc.) ──────────────
+router.get('/private-settings', requireAdmin, async (req, res) => {
+  try {
+    const result = await client.execute({
+      sql: 'SELECT key, value FROM site_settings WHERE key IN (' +
+           PRIVATE_SETTINGS.map(() => '?').join(',') + ')',
+      args: PRIVATE_SETTINGS,
+    });
+    const settings = {};
+    for (const row of result.rows) settings[row.key] = row.value;
+    res.json(settings);
+  } catch {
+    res.status(500).json({ error: 'Failed to load private settings' });
   }
 });
 
@@ -25,6 +46,7 @@ router.put('/settings', requireAdmin, async (req, res) => {
       'default_theme',
       'ga_tracking_id', 'custom_head_code', 'custom_body_code',
       'auto_block_threshold',
+      'telegram_bot_username', 'telegram_bot_token', 'telegram_channel_link',
     ];
     for (const [key, value] of Object.entries(req.body)) {
       if (!allowed.includes(key)) continue;
@@ -95,7 +117,7 @@ router.get('/users', requireAdmin, async (req, res) => {
     const rows = (await client.execute({
       sql: `SELECT id, username, email, gender, age, state, country,
                    is_guest, is_admin, is_blocked, violation_count,
-                   ip_address, created_at, last_seen
+                   ip_address, telegram_id, telegram_username, created_at, last_seen
             FROM users
             WHERE 1=1${whereClause}
             ORDER BY created_at DESC
@@ -116,6 +138,8 @@ router.get('/users', requireAdmin, async (req, res) => {
       isBlocked: r.is_blocked === 1,
       violationCount: Number(r.violation_count || 0),
       ipAddress: r.ip_address || null,
+      telegramId: r.telegram_id ? Number(r.telegram_id) : null,
+      telegramUsername: r.telegram_username || null,
       createdAt: r.created_at,
       lastSeen: r.last_seen || null,
     }));

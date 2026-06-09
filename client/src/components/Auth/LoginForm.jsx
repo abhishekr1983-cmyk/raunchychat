@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 export default function LoginForm({ onSwitch }) {
   const { login } = useAuth();
   const [form, setForm] = useState({ email: '', password: '' });
+  const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -37,7 +38,15 @@ export default function LoginForm({ onSwitch }) {
         <input type="email" value={form.email} onChange={set('email')} required autoFocus />
       </label>
       <label>Password
-        <input type="password" value={form.password} onChange={set('password')} required />
+        <div className="pw-wrap">
+          <input
+            type={showPw ? 'text' : 'password'}
+            value={form.password} onChange={set('password')} required
+          />
+          <button type="button" className="pw-eye" onClick={() => setShowPw((v) => !v)} tabIndex={-1}>
+            {showPw ? '🙈' : '👁'}
+          </button>
+        </div>
       </label>
       <button className="btn btn-primary" type="submit" disabled={loading}>
         {loading ? 'Signing in…' : 'Sign In'}

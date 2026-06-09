@@ -122,9 +122,11 @@ function UsersTab({ token }) {
                   <td>
                     <div style={{ fontWeight: 600 }}>
                       {u.isAdmin && <span title="Admin" style={{ marginRight: 4 }}>👑</span>}
+                      {u.telegramId && <span title={`Telegram: @${u.telegramUsername || u.telegramId}`} style={{ marginRight: 4 }}>✈️</span>}
                       {u.username}
                     </div>
                     <div className="admin-users-meta">#{u.id}</div>
+                    {u.telegramUsername && <div className="admin-users-meta">@{u.telegramUsername}</div>}
                     {u.violationCount > 0 && (
                       <div className="admin-violation-badge" title="Violation count">⚠ {u.violationCount}</div>
                     )}
@@ -364,6 +366,151 @@ function ModerationTab({ token, threshold, onThresholdSaved }) {
   );
 }
 
+// ── Integrations tab (Telegram) ────────────────────────────────
+function IntegrationsTab({ token, settings, updateSettings }) {
+  const [form, setForm] = useState({
+    telegram_bot_username: settings.telegram_bot_username || '',
+    telegram_bot_token: '',       // loaded separately
+    telegram_channel_link: settings.telegram_channel_link || '',
+  });
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+  const [tokenLoaded, setTokenLoaded] = useState(false);
+
+  // Load private settings (bot token) when tab opens
+  useEffect(() => {
+    if (tokenLoaded) return;
+    fetch('/api/admin/private-settings', { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.json())
+      .then((d) => {
+        setForm((p) => ({ ...p, telegram_bot_token: d.telegram_bot_token || '' }));
+        setTokenLoaded(true);
+      })
+      .catch(() => setErr('Could not load private settings'));
+  }, [token, tokenLoaded]);
+
+  useEffect(() => {
+    setForm((p) => ({
+      ...p,
+      telegram_bot_username: settings.telegram_bot_username || '',
+      telegram_channel_link: settings.telegram_channel_link || '',
+    }));
+  }, [settings.telegram_bot_username, settings.telegram_channel_link]);
+
+  const save = async (e) => {
+    e.preventDefault();
+    setMsg(''); setErr('');
+    try {
+      await updateSettings(form, token);
+      setMsg('Telegram settings saved ✓');
+      setTimeout(() => setMsg(''), 3000);
+    } catch (ex) { setErr(ex.message); }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div className="admin-section">
+        <div className="admin-section-header">
+          <span className="admin-section-icon">✈️</span>
+          <span className="admin-section-title">Telegram Login Integration</span>
+        </div>
+        <form className="admin-section-body" onSubmit={save}>
+          <div className="tg-setup-steps">
+            <p className="tg-setup-title">📋 Setup Instructions</p>
+            <ol className="tg-setup-list">
+              <li>Open <strong>@BotFather</strong> on Telegram and send <code>/newbot</code> to create a bot.</li>
+              <li>After creation, send <code>/setdomain</code> to BotFather → select your bot → enter your site domain (e.g. <code>yourdomain.com</code> — no https://).</li>
+              <li>Copy the bot username (shown as <em>@YourBotName</em>) and paste below <strong>without the @</strong>.</li>
+              <li>Copy the Bot Token (long string like <code>123456:ABC…</code>) and paste below.</li>
+              <li>Optionally, add your Telegram Channel link so visitors can find your community.</li>
+            </ol>
+          </div>
+
+          <div className="admin-fields-row">
+            <div className="admin-field">
+              <label>Bot Username <span className="admin-field-hint" style={{ display:'inline' }}>(without @)</span></label>
+              <input
+                value={form.telegram_bot_username}
+                onChange={(e) => setForm((p) => ({ ...p, telegram_bot_username: e.target.value.replace('@', '') }))}
+                placeholder="YourBotName"
+                maxLength={64}
+              />
+              <span className="admin-field-hint">Used to render the Login widget on the landing page. Leave blank to hide the button.</span>
+            </div>
+            <div className="admin-field">
+              <label>Bot Token <span style={{ color: 'var(--danger)', fontSize: '0.72rem' }}>🔒 Private</span></label>
+              <input
+                type="password"
+                value={form.telegram_bot_token}
+                onChange={(e) => setForm((p) => ({ ...p, telegram_bot_token: e.target.value }))}
+                placeholder={tokenLoaded ? (form.telegram_bot_token ? '••••••••' : 'Not set') : 'Loading…'}
+                maxLength={200}
+                autoComplete="off"
+              />
+              <span className="admin-field-hint">Never shared publicly. Used server-side to verify login authenticity.</span>
+            </div>
+          </div>
+
+          <div className="admin-field">
+            <label>Telegram Channel / Group Link</label>
+            <input
+              value={form.telegram_channel_link}
+              onChange={(e) => setForm((p) => ({ ...p, telegram_channel_link: e.target.value }))}
+              placeholder="https://t.me/yourchannel"
+              maxLength={200}
+            />
+            <span className="admin-field-hint">Optional — shows a "Join our Telegram" banner on the landing page.</span>
+          </div>
+
+          <div className="admin-save-row">
+            <button type="submit" className="btn btn-primary">Save Telegram Settings</button>
+            {msg && <span className="admin-save-msg">{msg}</span>}
+            {err && <span className="admin-save-err">{err}</span>}
+          </div>
+        </form>
+      </div>
+
+      {/* Status indicator */}
+      <div className="admin-section">
+        <div className="admin-section-header">
+          <span className="admin-section-icon">🔌</span>
+          <span className="admin-section-title">Integration Status</span>
+        </div>
+        <div className="admin-section-body">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: '1.1rem' }}>
+                {settings.telegram_bot_username ? '✅' : '⭕'}
+              </span>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>Telegram Login Widget</div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text2)' }}>
+                  {settings.telegram_bot_username
+                    ? `Active — bot: @${settings.telegram_bot_username}`
+                    : 'Not configured — set Bot Username and Token to enable'}
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: '1.1rem' }}>
+                {settings.telegram_channel_link ? '✅' : '⭕'}
+              </span>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>Channel Banner</div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text2)' }}>
+                  {settings.telegram_channel_link
+                    ? `Shown — ${settings.telegram_channel_link}`
+                    : 'Not configured — add a channel link to show banner'}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Scripts tab ────────────────────────────────────────────────
 function ScriptsTab({ token, settings, updateSettings }) {
   const [form, setForm] = useState({
@@ -561,13 +708,14 @@ export default function Admin() {
   if (!user?.isAdmin) return null;
 
   const TABS = [
-    { key: 'stats',      label: '📊 Stats' },
-    { key: 'users',      label: '👥 Users' },
-    { key: 'moderation', label: '🛡️ Moderation' },
-    { key: 'scripts',    label: '📡 Scripts' },
-    { key: 'branding',   label: '🎨 Branding' },
-    { key: 'seo',        label: '🔍 SEO' },
-    { key: 'theme',      label: '✨ Theme' },
+    { key: 'stats',        label: '📊 Stats' },
+    { key: 'users',        label: '👥 Users' },
+    { key: 'moderation',   label: '🛡️ Moderation' },
+    { key: 'integrations', label: '✈️ Telegram' },
+    { key: 'scripts',      label: '📡 Scripts' },
+    { key: 'branding',     label: '🎨 Branding' },
+    { key: 'seo',          label: '🔍 SEO' },
+    { key: 'theme',        label: '✨ Theme' },
   ];
 
   return (
@@ -624,6 +772,9 @@ export default function Admin() {
         {tab === 'moderation' && (
           <ModerationTab token={token} threshold={autoBlockThreshold} onThresholdSaved={setAutoBlockThreshold} />
         )}
+
+        {/* Integrations */}
+        {tab === 'integrations' && <IntegrationsTab token={token} settings={settings} updateSettings={updateSettings} />}
 
         {/* Scripts */}
         {tab === 'scripts' && <ScriptsTab token={token} settings={settings} updateSettings={updateSettings} />}

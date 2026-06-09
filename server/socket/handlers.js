@@ -246,13 +246,9 @@ function setupSocketHandlers(io) {
         return; // message NOT delivered
       }
 
-      // ── Bot messaging: echo to sender, apply pending limit (bots never reply) ──
+      // ── Bot messaging: unlimited, echo only — bots never reply ──
       if (toUserId < 0) {
-        const key = pendingKey(sender.id, toUserId);
-        const count = pendingCounts.get(key) || 0;
-        if (count >= 3) { socket.emit('message-blocked', { toUserId }); return; }
         const safe = trimmed.slice(0, 2000);
-        pendingCounts.set(key, count + 1);
         socket.emit('new-private-message', {
           id: Date.now(),
           sender_id: sender.id,
@@ -357,6 +353,22 @@ function setupSocketHandlers(io) {
       if (targetSocketId) io.to(targetSocketId).emit('webrtc-ice-candidate', { candidate });
     });
 
+    // ── Typing indicators ──────────────────────────────────────
+
+    socket.on('typing-start', ({ toUserId }) => {
+      const sender = socketToUser.get(socket.id);
+      if (!sender || toUserId < 0) return;
+      const targetSocketId = userToSocket.get(toUserId);
+      if (targetSocketId) io.to(targetSocketId).emit('user-typing', { userId: sender.id });
+    });
+
+    socket.on('typing-stop', ({ toUserId }) => {
+      const sender = socketToUser.get(socket.id);
+      if (!sender || toUserId < 0) return;
+      const targetSocketId = userToSocket.get(toUserId);
+      if (targetSocketId) io.to(targetSocketId).emit('user-stop-typing', { userId: sender.id });
+    });
+
     // ── Admin: bot controls ────────────────────────────────────
 
     socket.on('admin-clear-bots', () => {
@@ -412,4 +424,6 @@ function setupSocketHandlers(io) {
   });
 }
 
-module.exports = { setupSocketHandlers, kickUser, refreshBlockedWords };
+function getOnlineCount() { return roomOnlineCount(); }
+
+module.exports = { setupSocketHandlers, kickUser, refreshBlockedWords, getOnlineCount };

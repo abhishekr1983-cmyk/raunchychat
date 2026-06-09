@@ -33,6 +33,8 @@ export default function Chat() {
   const [search, setSearch] = useState('');
   const [recentlyJoined, setRecentlyJoined] = useState(new Set());
   const recentTimers = useRef({});
+  // Stable per-session shuffle: map userId → random sort key assigned on first sight
+  const userOrderMap = useRef(new Map());
 
   // Filters
   const [filterGender, setFilterGender] = useState('');
@@ -46,8 +48,13 @@ export default function Chat() {
   useEffect(() => {
     if (!socket) return;
 
-    const handleRoomUsers = (users) => setAllUsers(Array.isArray(users) ? users : []);
+    const handleRoomUsers = (users) => {
+      if (!Array.isArray(users)) return;
+      users.forEach((u) => { if (!userOrderMap.current.has(u.id)) userOrderMap.current.set(u.id, Math.random()); });
+      setAllUsers(users);
+    };
     const handleUserJoined = (u) => {
+      if (!userOrderMap.current.has(u.id)) userOrderMap.current.set(u.id, Math.random());
       setAllUsers((prev) => prev.find((p) => p.id === u.id) ? prev : [...prev, u]);
       // Highlight the newly joined user for 4 seconds
       setRecentlyJoined((prev) => new Set([...prev, u.id]));
@@ -114,7 +121,8 @@ export default function Chat() {
       .filter((u) => !filterGender || u.gender === filterGender)
       .filter((u) => !filterCountry || u.country === filterCountry)
       .filter((u) => !filterState || u.state === filterState)
-      .filter((u) => u.age >= filterAgeMin && u.age <= filterAgeMax);
+      .filter((u) => u.age >= filterAgeMin && u.age <= filterAgeMax)
+      .sort((a, b) => (userOrderMap.current.get(a.id) ?? 0) - (userOrderMap.current.get(b.id) ?? 0));
   }, [allUsers, user, search, filterGender, filterCountry, filterState, filterAgeMin, filterAgeMax]);
 
   const resetFilters = () => {

@@ -30,6 +30,8 @@ async function initDB() {
     'ALTER TABLE users ADD COLUMN last_seen DATETIME',
     'ALTER TABLE users ADD COLUMN is_blocked INTEGER DEFAULT 0',
     'ALTER TABLE users ADD COLUMN violation_count INTEGER DEFAULT 0',
+    'ALTER TABLE users ADD COLUMN telegram_id INTEGER',
+    'ALTER TABLE users ADD COLUMN telegram_username TEXT',
   ];
   for (const sql of migrations) {
     try { await client.execute(sql); } catch { /* column already exists — fine */ }
@@ -114,6 +116,9 @@ async function initDB() {
     ['custom_head_code', ''],
     ['custom_body_code', ''],
     ['auto_block_threshold', '3'],
+    ['telegram_bot_username', ''],
+    ['telegram_bot_token', ''],      // private — never exposed via public API
+    ['telegram_channel_link', ''],
   ];
   for (const [key, value] of defaults) {
     try {

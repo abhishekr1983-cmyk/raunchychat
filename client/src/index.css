@@ -263,7 +263,7 @@ a { color: var(--accent); text-decoration: none; }
 .landing-logo { font-size: 4rem; }
 .landing-title { font-size: 3rem; font-weight: 700; }
 .landing-subtitle { font-size: 1.1rem; color: var(--text2); line-height: 1.7; }
-.landing-actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+.landing-actions { display: flex; flex-direction: column; gap: 12px; align-items: center; width: 100%; max-width: 420px; margin: 0 auto; }
 .landing-note { font-size: 0.8rem; color: var(--text3); }
 .landing-features {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -498,6 +498,7 @@ a { color: var(--accent); text-decoration: none; }
 /* ── Private chat ──────────────────────────────────────────── */
 .private-chat {
   display: flex; flex-direction: column; height: 100%; overflow: hidden;
+  position: relative;
 }
 
 /* Chat header */
@@ -768,6 +769,68 @@ a { color: var(--accent); text-decoration: none; }
 .landing-theme-btn {
   position: fixed; top: 16px; right: 16px; z-index: 50;
 }
+
+/* ── Landing: live count + guest-first CTA ────────────────── */
+.landing-live-count {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3);
+  border-radius: 20px; padding: 6px 16px; margin-bottom: 20px;
+  font-size: 0.9rem; color: var(--text2);
+}
+.landing-live-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--success);
+  animation: livePulse 2s ease-in-out infinite; flex-shrink: 0;
+}
+@keyframes livePulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+.landing-guest-btn {
+  width: 100%; justify-content: center; font-size: 1.05rem;
+  padding: 14px 28px; border-radius: 12px;
+}
+.landing-actions-secondary {
+  display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+}
+
+/* ── Password show/hide ────────────────────────────────────── */
+.pw-wrap { position: relative; display: flex; align-items: center; }
+.pw-wrap input { flex: 1; padding-right: 42px; }
+.pw-eye {
+  position: absolute; right: 10px;
+  background: none; border: none; font-size: 1rem;
+  cursor: pointer; opacity: 0.6; padding: 0;
+  line-height: 1;
+}
+.pw-eye:hover { opacity: 1; }
+
+/* ── Typing bubble ─────────────────────────────────────────── */
+.pc-typing-status { color: var(--accent); font-style: italic; font-size: 0.78rem; }
+
+.pc-typing-bubble {
+  display: flex; align-items: center; gap: 4px;
+  background: var(--bg2); border-radius: 18px; border-bottom-left-radius: 4px;
+  padding: 12px 16px;
+}
+.pc-typing-bubble span {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--text3);
+  animation: typingBounce 1.2s infinite;
+}
+.pc-typing-bubble span:nth-child(2) { animation-delay: 0.2s; }
+.pc-typing-bubble span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typingBounce {
+  0%,60%,100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-6px); opacity: 1; }
+}
+
+/* ── Scroll-to-bottom button ───────────────────────────────── */
+.pc-scroll-btn {
+  position: absolute; bottom: 90px; right: 20px;
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--accent); color: #fff; border: none;
+  font-size: 1.1rem; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4); z-index: 5;
+  transition: transform 0.15s;
+}
+.pc-scroll-btn:hover { transform: scale(1.1); }
 
 /* ── New-join animation ────────────────────────────────────── */
 @keyframes newJoinPulse {
@@ -1285,6 +1348,107 @@ a { color: var(--accent); text-decoration: none; }
   .admin-stats {
     grid-template-columns: 1fr 1fr;
   }
+}
+
+/* ── Telegram channel banner ───────────────────────────────── */
+.tg-channel-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #0088cc 0%, #0099dd 100%);
+  color: #fff;
+  padding: 10px 22px;
+  border-radius: 40px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity 0.15s, transform 0.15s;
+  box-shadow: 0 4px 16px rgba(0,136,204,0.35);
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  white-space: nowrap;
+}
+.tg-channel-banner:hover {
+  opacity: 0.92;
+  transform: translateX(-50%) translateY(-1px);
+  color: #fff;
+}
+.tg-channel-icon { font-size: 1.1rem; }
+.tg-channel-arrow { opacity: 0.8; }
+
+/* ── Telegram login section ────────────────────────────────── */
+.tg-login-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+.tg-login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 340px;
+  color: var(--text3);
+  font-size: 0.82rem;
+}
+.tg-login-divider::before,
+.tg-login-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.tg-widget-container {
+  display: flex;
+  justify-content: center;
+  min-height: 44px;
+}
+.tg-login-status {
+  font-size: 0.82rem;
+  color: var(--text2);
+}
+.tg-login-error {
+  font-size: 0.82rem;
+  color: var(--danger);
+}
+
+/* ── Telegram admin setup styles ───────────────────────────── */
+.tg-setup-steps {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 18px;
+}
+.tg-setup-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: var(--text);
+}
+.tg-setup-list {
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.tg-setup-list li {
+  font-size: 0.83rem;
+  color: var(--text2);
+  line-height: 1.55;
+}
+.tg-setup-list li code {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.8rem;
+  color: var(--accent);
+  font-family: monospace;
 }
 
 /* ── Word violation banner ─────────────────────────────────── */
