@@ -24,6 +24,7 @@ export default function Chat() {
   const [confCode, setConfCode] = useState('');
   const [confErr, setConfErr] = useState('');
   const [profileModal, setProfileModal] = useState(null); // null | {mode:'edit'} | {mode:'view',userId}
+  const [menuOpen, setMenuOpen] = useState(false);         // mobile hamburger menu
   const [search, setSearch] = useState('');
   const [genderTab, setGenderTab] = useState('All'); // 'All' | 'Male' | 'Female'
   const [leftTab, setLeftTab] = useState('people');  // 'people' | 'messages'
@@ -210,18 +211,57 @@ export default function Chat() {
             {user?.isGuest && <span className="guest-badge">Guest</span>}
             <span className="user-chip-edit">✎</span>
           </button>
-          <button className="btn btn-sm conf-create-btn" onClick={createConference} title="Create conference room">
-            📹 Create Room
+
+          {/* Desktop inline actions */}
+          <div className="ch-actions">
+            <button className="btn btn-sm conf-create-btn" onClick={createConference} title="Create conference room">
+              📹 Create Room
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={() => { setShowConfJoin(true); setConfErr(''); setConfCode(''); }} title="Join conference room">
+              🔗 Join Room
+            </button>
+            {user?.isAdmin && (
+              <button className="btn btn-ghost btn-sm" onClick={() => navigate('/admin')} title="Admin Panel">⚙ Admin</button>
+            )}
+            <button className="btn btn-ghost btn-sm" onClick={logout}>Sign Out</button>
+          </div>
+
+          {/* Mobile hamburger */}
+          <button
+            className={`ch-hamburger ${menuOpen ? 'open' : ''}`}
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-label="Menu"
+          >
+            <span /><span /><span />
           </button>
-          <button className="btn btn-ghost btn-sm" onClick={() => { setShowConfJoin(true); setConfErr(''); setConfCode(''); }} title="Join conference room">
-            🔗 Join Room
-          </button>
-          {user?.isAdmin && (
-            <button className="btn btn-ghost btn-sm" onClick={() => navigate('/admin')} title="Admin Panel">⚙ Admin</button>
-          )}
-          <button className="btn btn-ghost btn-sm" onClick={logout}>Sign Out</button>
         </div>
       </header>
+
+      {/* Mobile dropdown menu */}
+      {menuOpen && (
+        <>
+          <div className="ch-menu-backdrop" onClick={() => setMenuOpen(false)} />
+          <div className="ch-menu-dropdown">
+            <button className="ch-menu-item" onClick={() => { setProfileModal({ mode: 'edit' }); setMenuOpen(false); }}>
+              ✎ Edit Profile
+            </button>
+            <button className="ch-menu-item" onClick={() => { createConference(); setMenuOpen(false); }}>
+              📹 Create Room
+            </button>
+            <button className="ch-menu-item" onClick={() => { setShowConfJoin(true); setConfErr(''); setConfCode(''); setMenuOpen(false); }}>
+              🔗 Join Room
+            </button>
+            {user?.isAdmin && (
+              <button className="ch-menu-item" onClick={() => { navigate('/admin'); setMenuOpen(false); }}>
+                ⚙ Admin Panel
+              </button>
+            )}
+            <button className="ch-menu-item danger" onClick={() => { setMenuOpen(false); logout(); }}>
+              ⏻ Sign Out
+            </button>
+          </div>
+        </>
+      )}
 
       {/* ── Left: User list panel ── */}
       <aside className="user-list-panel">

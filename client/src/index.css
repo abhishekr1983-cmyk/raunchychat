@@ -244,6 +244,43 @@ a { color: var(--accent); text-decoration: none; }
 .ch-center { display: flex; align-items: center; gap: 10px; flex: 1; }
 .ch-online { font-size: 0.82rem; color: var(--text2); }
 .ch-right { display: flex; align-items: center; gap: 10px; }
+.ch-actions { display: flex; align-items: center; gap: 10px; }
+
+/* Hamburger (mobile only — hidden on desktop) */
+.ch-hamburger {
+  display: none;
+  flex-direction: column; justify-content: center; gap: 4px;
+  width: 40px; height: 40px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--bg3);
+  cursor: pointer; flex-shrink: 0; padding: 0;
+}
+.ch-hamburger span {
+  display: block; width: 18px; height: 2px; border-radius: 2px;
+  background: var(--text); margin: 0 auto;
+  transition: transform 0.2s, opacity 0.2s;
+}
+.ch-hamburger.open span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+.ch-hamburger.open span:nth-child(2) { opacity: 0; }
+.ch-hamburger.open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+
+/* Mobile dropdown menu */
+.ch-menu-backdrop { position: fixed; inset: 0; z-index: 40; background: transparent; }
+.ch-menu-dropdown {
+  position: fixed; top: 54px; right: 10px; z-index: 50;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.18);
+  padding: 6px; min-width: 200px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.ch-menu-item {
+  display: flex; align-items: center; gap: 10px;
+  background: none; border: none; border-radius: 8px;
+  padding: 12px 14px; font-size: 0.92rem; color: var(--text);
+  text-align: left; cursor: pointer; width: 100%;
+  transition: background 0.12s;
+}
+.ch-menu-item:hover { background: var(--bg3); }
+.ch-menu-item.danger { color: var(--danger); }
 
 .calling-banner {
   display: flex; align-items: center; gap: 10px;
@@ -771,11 +808,15 @@ a { color: var(--accent); text-decoration: none; }
     gap: 6px;
   }
   .user-chip {
-    padding: 3px 8px;
+    padding: 3px;
   }
-  .user-name {
-    display: none;
-  }
+  .user-name { display: none; }
+  .user-chip-edit { display: none; }
+  .user-chip-btn .guest-badge { display: none; }
+
+  /* Swap inline actions for hamburger */
+  .ch-actions { display: none; }
+  .ch-hamburger { display: flex; }
   /* Mobile chat header back button */
   .pc-mobile-back {
     display: flex;
@@ -823,6 +864,16 @@ a { color: var(--accent); text-decoration: none; }
     left: 0;
     max-height: 85vh;
   }
+
+  /* Profile modal — bottom sheet on mobile */
+  .pf-modal {
+    width: 100%;
+    border-radius: 16px 16px 0 0;
+    position: fixed;
+    bottom: 0; left: 0;
+    max-height: 92vh;
+  }
+  .pf-row3 { grid-template-columns: 1fr 1fr; }
 
   /* Call window full-screen on mobile */
   .call-window {
