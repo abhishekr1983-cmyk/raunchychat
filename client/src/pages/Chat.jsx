@@ -5,6 +5,7 @@ import { useSiteSettings } from '../contexts/SiteSettingsContext';
 import PrivateChat from '../components/Chat/PrivateChat';
 import IncomingCallModal from '../components/Call/IncomingCallModal';
 import VideoCall from '../components/Call/VideoCall';
+import ProfileModal from '../components/Profile/ProfileModal';
 import { getFlag } from '../utils/flags';
 import { getAvatarStyle, getInitial } from '../utils/avatar';
 import { useNavigate } from 'react-router-dom';
@@ -22,6 +23,7 @@ export default function Chat() {
   const [showConfJoin, setShowConfJoin] = useState(false);
   const [confCode, setConfCode] = useState('');
   const [confErr, setConfErr] = useState('');
+  const [profileModal, setProfileModal] = useState(null); // null | {mode:'edit'} | {mode:'view',userId}
   const [search, setSearch] = useState('');
   const [genderTab, setGenderTab] = useState('All'); // 'All' | 'Male' | 'Female'
   const [leftTab, setLeftTab] = useState('people');  // 'people' | 'messages'
@@ -200,13 +202,14 @@ export default function Chat() {
         </div>
 
         <div className="ch-right">
-          <div className="user-chip">
+          <button className="user-chip user-chip-btn" onClick={() => setProfileModal({ mode: 'edit' })} title="Edit your profile">
             <div className="user-avatar" style={getAvatarStyle(user?.username || '?')}>
-              {getInitial(user?.username || '?')}
+              {user?.avatarEmoji || getInitial(user?.username || '?')}
             </div>
             <span className="user-name">{user?.username}</span>
             {user?.isGuest && <span className="guest-badge">Guest</span>}
-          </div>
+            <span className="user-chip-edit">✎</span>
+          </button>
           <button className="btn btn-sm conf-create-btn" onClick={createConference} title="Create conference room">
             📹 Create Room
           </button>
@@ -272,7 +275,7 @@ export default function Chat() {
                       onClick={() => openChat(u)}
                     >
                       <div className="ulp-avatar" style={getAvatarStyle(u.username)}>
-                        {getInitial(u.username)}
+                        {u.avatarEmoji || getInitial(u.username)}
                         <span className="ulp-online-ring" />
                       </div>
                       <div className="ulp-info">
@@ -283,6 +286,11 @@ export default function Chat() {
                         </div>
                         <div className="ulp-meta">{u.age} · {u.state}, {u.country} {getFlag(u.country)}</div>
                       </div>
+                      <button
+                        className="ulp-profile-btn"
+                        title={`View ${u.username}'s profile`}
+                        onClick={(e) => { e.stopPropagation(); setProfileModal({ mode: 'view', userId: u.id }); }}
+                      >ⓘ</button>
                     </div>
                   );
                 })
@@ -339,6 +347,7 @@ export default function Chat() {
             onClose={() => setSelectedUser(null)}
             onBack={() => setSelectedUser(null)}
             onCall={initiateCall}
+            onViewProfile={(id) => setProfileModal({ mode: 'view', userId: id })}
             callState={callState}
           />
         ) : (
@@ -353,6 +362,16 @@ export default function Chat() {
           </div>
         )}
       </main>
+
+      {/* ── Profile modal (edit own / view others) ── */}
+      {profileModal && (
+        <ProfileModal
+          mode={profileModal.mode}
+          viewUserId={profileModal.userId}
+          onClose={() => setProfileModal(null)}
+          onMessage={profileModal.mode === 'view' ? (peer) => openChat(peer) : undefined}
+        />
+      )}
 
       {/* ── Modals / overlays ── */}
       {callState?.type === 'incoming' && (

@@ -36,7 +36,7 @@ function playPing() {
   } catch { /* browser blocked autoplay */ }
 }
 
-export default function PrivateChat({ peer, socket, currentUser, onClose, onCall, callState, onBack }) {
+export default function PrivateChat({ peer, socket, currentUser, onClose, onCall, callState, onBack, onViewProfile }) {
   const [messages, setMessages] = useState([]);
   const [pendingCount, setPendingCount] = useState(0);
   const [text, setText] = useState('');
@@ -198,19 +198,25 @@ export default function PrivateChat({ peer, socket, currentUser, onClose, onCall
           {onBack && (
             <button className="pc-mobile-back" onClick={onBack} title="Back">←</button>
           )}
-          <div className="pc-avatar-lg" style={getAvatarStyle(peer.username)}>
-            {getInitial(peer.username)}
-          </div>
-          <div className="pc-peer-details">
-            <div className="pc-peer-name-row">
-              {peer.isAdmin && <span className="pc-admin-crown" title="Admin">👑</span>}
-              <span className="pc-peer-name">{peer.username}</span>
-              <span className="pc-flag">{getFlag(peer.country)}</span>
+          <div
+            className="pc-peer-clickable"
+            onClick={() => onViewProfile?.(peer.id)}
+            title={`View ${peer.username}'s profile`}
+          >
+            <div className="pc-avatar-lg" style={getAvatarStyle(peer.username)}>
+              {peer.avatarEmoji || getInitial(peer.username)}
             </div>
-            <div className="pc-peer-meta">
-              {peerTyping
-                ? <span className="pc-typing-status">typing…</span>
-                : <><span className="pc-online-dot" />Online · {peer.age} Yrs · {peer.state}, {peer.country}</>}
+            <div className="pc-peer-details">
+              <div className="pc-peer-name-row">
+                {peer.isAdmin && <span className="pc-admin-crown" title="Admin">👑</span>}
+                <span className="pc-peer-name">{peer.username}</span>
+                <span className="pc-flag">{getFlag(peer.country)}</span>
+              </div>
+              <div className="pc-peer-meta">
+                {peerTyping
+                  ? <span className="pc-typing-status">typing…</span>
+                  : <><span className="pc-online-dot" />Online · {peer.age} Yrs · {peer.state}, {peer.country}</>}
+              </div>
             </div>
           </div>
         </div>

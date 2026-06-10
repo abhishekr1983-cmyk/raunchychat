@@ -29,6 +29,16 @@ export function AuthProvider({ children }) {
     setUser(newUser);
   }, []);
 
+  // Merge updated fields into the stored user (after a profile save)
+  const updateUser = useCallback((patch) => {
+    setUser((prev) => {
+      const next = { ...prev, ...patch };
+      const store = next.isGuest ? sessionStorage : localStorage;
+      store.setItem('chat_user', JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   const logout = useCallback(() => {
     localStorage.removeItem('chat_token');
     localStorage.removeItem('chat_user');
@@ -39,7 +49,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ token, user, login, logout }}>
+    <AuthContext.Provider value={{ token, user, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

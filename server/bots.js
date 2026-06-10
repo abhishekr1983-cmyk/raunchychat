@@ -46,6 +46,56 @@ const FEMALE_AGES = [22, 19, 28, 24, 31, 20, 26, 33, 18, 29,
                      24, 29, 19, 34, 22, 28, 36, 21, 27, 40,
                      23, 18, 31, 26, 20, 33, 25, 29, 22, 35];
 
+// ── Profile data pools (deterministic, varied) ─────────────────
+const INTEREST_POOL = [
+  'Music', 'Movies', 'Travel', 'Gaming', 'Fitness', 'Cooking', 'Reading',
+  'Art', 'Photography', 'Dancing', 'Cricket', 'Football', 'Fashion',
+  'Nature', 'Technology', 'Pets', 'Yoga', 'Coffee', 'Netflix', 'Nightlife',
+  'Hiking', 'Singing', 'Bikes', 'Foodie', 'Anime',
+];
+const LANGUAGE_POOL = ['Hindi', 'English', 'Punjabi', 'Tamil', 'Telugu', 'Bengali', 'Marathi', 'Gujarati', 'Kannada', 'Malayalam'];
+const LOOKING_POOL = ['Friendship', 'Casual chat', 'Dating', 'Flirting', 'Just here for fun'];
+const REL_POOL = ['Single', 'Open relationship', "It's complicated", 'Prefer not to say'];
+const ORI_MALE = ['Straight', 'Bisexual', 'Curious'];
+const ORI_FEMALE = ['Straight', 'Bisexual', 'Curious', 'Pansexual'];
+const BODY_MALE = ['Athletic', 'Average', 'Muscular', 'Slim'];
+const BODY_FEMALE = ['Slim', 'Curvy', 'Average', 'Athletic'];
+const BIO_TEMPLATES = [
+  'Just here to meet new people and have fun conversations. 😊',
+  'Love a good chat. Hit me up if you wanna talk!',
+  'Foodie, traveller, and a hopeless romantic at heart.',
+  'Looking for genuine connections, not just small talk.',
+  'Easy going and always up for a laugh. Lets vibe.',
+  'Coffee addict ☕ and weekend explorer. Say hi!',
+  'Music is my therapy. Tell me your favourite song.',
+  'Work hard, flirt harder. 😉',
+  'New here — show me around and lets get to know each other.',
+  'Honest, fun and a little bit naughty. 🔥',
+];
+
+// Simple deterministic picker: choose n items from pool based on a seed
+function pick(pool, seed, n) {
+  const out = [];
+  for (let k = 0; k < n; k++) {
+    out.push(pool[(seed * 7 + k * 13 + 3) % pool.length]);
+  }
+  return [...new Set(out)];
+}
+
+function buildProfile(i, gender) {
+  return {
+    bio: BIO_TEMPLATES[i % BIO_TEMPLATES.length],
+    interests: pick(INTEREST_POOL, i, 3 + (i % 3)),          // 3–5 interests
+    lookingFor: pick(LOOKING_POOL, i + 2, 1 + (i % 2)),      // 1–2
+    relationshipStatus: REL_POOL[i % REL_POOL.length],
+    orientation: (gender === 'Female' ? ORI_FEMALE : ORI_MALE)[i % (gender === 'Female' ? ORI_FEMALE : ORI_MALE).length],
+    languages: pick(LANGUAGE_POOL, i + 1, 2),
+    bodyType: (gender === 'Female' ? BODY_FEMALE : BODY_MALE)[i % 4],
+    height: `${gender === 'Female' ? 150 + (i % 25) : 165 + (i % 25)} cm`,
+    avatarEmoji: '',
+  };
+}
+
 function makeBots() {
   const bots = [];
 
@@ -60,6 +110,7 @@ function makeBots() {
       country: 'India',
       isGuest: true,
       isAdmin: false,
+      ...buildProfile(i, 'Male'),
     });
   }
 
@@ -74,6 +125,7 @@ function makeBots() {
       country: 'India',
       isGuest: true,
       isAdmin: false,
+      ...buildProfile(i, 'Female'),
     });
   }
 
@@ -81,5 +133,6 @@ function makeBots() {
 }
 
 const BOTS = makeBots();
+const BOTS_BY_ID = new Map(BOTS.map((b) => [b.id, b]));
 
-module.exports = { BOTS };
+module.exports = { BOTS, BOTS_BY_ID };

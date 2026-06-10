@@ -33,6 +33,16 @@ async function initDB() {
     'ALTER TABLE users ADD COLUMN telegram_id INTEGER',
     'ALTER TABLE users ADD COLUMN telegram_username TEXT',
     'ALTER TABLE users ADD COLUMN google_id TEXT',
+    // ── Profile fields ──
+    'ALTER TABLE users ADD COLUMN bio TEXT',
+    'ALTER TABLE users ADD COLUMN interests TEXT',            // JSON array of strings
+    'ALTER TABLE users ADD COLUMN looking_for TEXT',          // JSON array of strings
+    'ALTER TABLE users ADD COLUMN relationship_status TEXT',
+    'ALTER TABLE users ADD COLUMN orientation TEXT',
+    'ALTER TABLE users ADD COLUMN languages TEXT',            // JSON array of strings
+    'ALTER TABLE users ADD COLUMN body_type TEXT',
+    'ALTER TABLE users ADD COLUMN height TEXT',
+    'ALTER TABLE users ADD COLUMN avatar_emoji TEXT',
   ];
   for (const sql of migrations) {
     try { await client.execute(sql); } catch { /* column already exists — fine */ }

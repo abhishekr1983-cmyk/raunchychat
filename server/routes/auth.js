@@ -4,8 +4,16 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { client } = require('../db');
 const { JWT_SECRET } = require('../middleware/auth');
+const { BOTS_BY_ID } = require('../bots');
 
 const router = express.Router();
+
+// Safely parse a JSON-array column; returns [] on any problem
+function parseArr(val) {
+  if (!val) return [];
+  try { const a = JSON.parse(val); return Array.isArray(a) ? a : []; }
+  catch { return []; }
+}
 
 function safeUser(row, extra = {}) {
   return {
@@ -19,6 +27,16 @@ function safeUser(row, extra = {}) {
     isGuest: row.is_guest === 1,
     isAdmin: row.is_admin === 1,
     telegramId: row.telegram_id ? Number(row.telegram_id) : null,
+    // ── Profile fields ──
+    bio: row.bio || '',
+    interests: parseArr(row.interests),
+    lookingFor: parseArr(row.looking_for),
+    relationshipStatus: row.relationship_status || '',
+    orientation: row.orientation || '',
+    languages: parseArr(row.languages),
+    bodyType: row.body_type || '',
+    height: row.height || '',
+    avatarEmoji: row.avatar_emoji || '',
     ...extra,
   };
 }
@@ -266,6 +284,106 @@ router.put('/profile', async (req, res) => {
     console.error('[profile update]', err);
     res.status(500).json({ error: 'Server error' });
   }
+});
+
+// ── Full profile update (bio, interests, hobbies, etc.) ──────────
+const RELATIONSHIP_OPTS = ['Single', 'Taken', 'Married', 'Open relationship', "It's complicated", 'Prefer not to say'];
+const ORIENTATION_OPTS  = ['Straight', 'Gay', 'Lesbian', 'Bisexual', 'Pansexual', 'Asexual', 'Curious', 'Prefer not to say'];
+const BODY_OPTS         = ['Slim', 'Athletic', 'Average', 'Curvy', 'Muscular', 'Plus-size', 'Prefer not to say'];
+const LOOKING_OPTS      = ['Friendship', 'Casual chat', 'Dating', 'Relationship', 'Flirting', 'Roleplay', 'Just here for fun'];
+
+function cleanList(arr, max = 15, maxLen = 30) {
+  if (!Array.isArray(arr)) return [];
+  return [...new Set(
+    arr.map((x) => String(x).trim().slice(0, maxLen)).filter(Boolean)
+  )].slice(0, max);
+}
+
+router.put('/me', async (req, res) => {
+  try {
+    const auth = req.headers.authorization;
+    if (!auth?.startsWith('Bearer ')) return res.status(401).json({ error: 'Not authenticated' });
+    const { userId } = jwt.verify(auth.slice(7), JWT_SECRET);
+
+    const b = req.body || {};
+
+    // Validate the editable standard fields if provided
+    const gender  = b.gender ? String(b.gender) : null;
+    const age     = b.age != null ? Number(b.age) : null;
+    if (age != null && (age < 18 || age > 120)) return res.status(400).json({ error: 'Age must be 18–120' });
+
+    // Whitelist-validate option fields (allow '' to clear)
+    const rel = b.relationshipStatus && RELATIONSHIP_OPTS.includes(b.relationshipStatus) ? b.relationshipStatus : '';
+    const ori = b.orientation && ORIENTATION_OPTS.includes(b.orientation) ? b.orientation : '';
+    const body = b.bodyType && BODY_OPTS.includes(b.bodyType) ? b.bodyType : '';
+    const lookingFor = cleanList((b.lookingFor || []).filter((x) => LOOKING_OPTS.includes(x)), 7);
+
+    const bio        = String(b.bio || '').slice(0, 500);
+    const interests  = cleanList(b.interests, 15);
+    const languages  = cleanList(b.languages, 10, 20);
+    const height     = String(b.height || '').slice(0, 20);
+    const avatarEmoji = String(b.avatarEmoji || '').slice(0, 8);
+
+    // Build a dynamic UPDATE so we don't overwrite standard fields when omitted
+    const sets = [
+      'bio = ?', 'interests = ?', 'looking_for = ?', 'relationship_status = ?',
+      'orientation = ?', 'languages = ?', 'body_type = ?', 'height = ?', 'avatar_emoji = ?',
+    ];
+    const args = [
+      bio, JSON.stringify(interests), JSON.stringify(lookingFor), rel,
+      ori, JSON.stringify(languages), body, height, avatarEmoji,
+    ];
+    if (gender) { sets.push('gender = ?'); args.push(gender); }
+    if (age != null) { sets.push('age = ?'); args.push(age); }
+    if (b.country) { sets.push('country = ?'); args.push(String(b.country)); }
+    if (b.state != null) { sets.push('state = ?'); args.push(String(b.state)); }
+
+    args.push(Number(userId));
+    await client.execute({ sql: `UPDATE users SET ${sets.join(', ')} WHERE id = ?`, args });
+
+    const row = (await client.execute({ sql: 'SELECT * FROM users WHERE id = ?', args: [Number(userId)] })).rows[0];
+    res.json({ user: safeUser(row) });
+  } catch (err) {
+    console.error('[profile /me update]', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ── Fetch a user's public profile (for viewing others) ──────────
+router.get('/profile/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!id) return res.status(404).json({ error: 'Profile not found' });
+
+    // Bots have negative IDs and live in memory, not the DB
+    if (id < 0) {
+      const bot = BOTS_BY_ID.get(id);
+      if (!bot) return res.status(404).json({ error: 'Profile not found' });
+      return res.json({ user: { ...bot, lookingFor: bot.lookingFor || [], avatarEmoji: bot.avatarEmoji || '' } });
+    }
+
+    const row = (await client.execute({ sql: 'SELECT * FROM users WHERE id = ?', args: [id] })).rows[0];
+    if (!row) return res.status(404).json({ error: 'Profile not found' });
+
+    const u = safeUser(row);
+    // Strip private fields for public view
+    delete u.email;
+    delete u.telegramId;
+    res.json({ user: u });
+  } catch (err) {
+    console.error('[get profile]', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Expose option lists so the client and server stay in sync
+router.get('/profile-options', (_, res) => {
+  res.json({
+    relationshipStatus: RELATIONSHIP_OPTS,
+    orientation: ORIENTATION_OPTS,
+    bodyType: BODY_OPTS,
+    lookingFor: LOOKING_OPTS,
+  });
 });
 
 module.exports = router;
