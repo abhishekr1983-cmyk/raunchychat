@@ -8,8 +8,5 @@
     "build": "cd client && npm install && VITE_SOCKET_URL='' npm run build",
     "start": "cd server && node index.js",
     "install-deps": "cd server && npm install"
-  },
-  "devDependencies": {
-    "socket.io-client": "^4.8.3"
   }
 }
