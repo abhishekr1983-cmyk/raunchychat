@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import LoginForm from '../components/Auth/LoginForm';
 import RegisterForm from '../components/Auth/RegisterForm';
+import GoogleButton from '../components/Auth/GoogleButton';
 import { useSiteSettings } from '../contexts/SiteSettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { COUNTRIES } from '../data/countries';
@@ -20,38 +21,6 @@ export default function Landing() {
   const [guestError, setGuestError] = useState('');
   const [guestLoading, setGuestLoading] = useState(false);
 
-  const googleClientId = settings.google_client_id?.trim();
-
-  useEffect(() => {
-    if (!googleClientId) return;
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      window.google?.accounts?.id?.initialize({
-        client_id: googleClientId,
-        callback: async ({ credential }) => {
-          try {
-            const res = await fetch('/api/auth/google', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ credential }),
-            });
-            const data = await res.json();
-            if (!res.ok) { setGuestError(data.error || 'Google sign-in failed'); return; }
-            login(data.token, data.user);
-          } catch { setGuestError('Google sign-in failed'); }
-        },
-      });
-      window.google?.accounts?.id?.renderButton(
-        document.getElementById('g_id_signin'),
-        { theme: 'outline', size: 'large', width: 360, text: 'continue_with' }
-      );
-    };
-    document.body.appendChild(script);
-    return () => { document.body.removeChild(script); };
-  }, [googleClientId]);
 
   // Fetch live online count on mount + refresh every 30s
   useEffect(() => {
@@ -196,12 +165,10 @@ export default function Landing() {
 
           <p className="cb-disclaimer">🔞 Adults 18+ only · Guest sessions expire in 24h</p>
 
-          {googleClientId && (
-            <div className="cb-google-divider">
-              <span>or</span>
-            </div>
+          {settings.google_client_id?.trim() && (
+            <div className="cb-google-divider"><span>or sign in with</span></div>
           )}
-          {googleClientId && <div id="g_id_signin" className="cb-google-btn" />}
+          <GoogleButton width={384} onError={(msg) => setGuestError(msg)} />
         </div>
       </div>
 
@@ -210,7 +177,13 @@ export default function Landing() {
         <div className="modal-overlay" onClick={() => setModal(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <button className="modal-close" onClick={() => setModal(null)}>✕</button>
-            {modal === 'login' && <LoginForm onSwitch={() => setModal('register')} />}
+            {modal === 'login' && (
+              <>
+                <LoginForm onSwitch={() => setModal('register')} />
+                <div className="cb-google-divider" style={{ marginTop: 8 }}><span>or</span></div>
+                <GoogleButton width={416} onError={(msg) => {}} />
+              </>
+            )}
             {modal === 'register' && <RegisterForm onSwitch={() => setModal('login')} />}
           </div>
         </div>
