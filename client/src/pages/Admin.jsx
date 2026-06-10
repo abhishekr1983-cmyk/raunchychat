@@ -733,7 +733,7 @@ export default function Admin() {
     { key: 'stats',        label: '📊 Stats' },
     { key: 'users',        label: '👥 Users' },
     { key: 'moderation',   label: '🛡️ Moderation' },
-    { key: 'integrations', label: '✈️ Telegram' },
+    { key: 'integrations', label: '🔗 Integrations' },
     { key: 'scripts',      label: '📡 Scripts' },
     { key: 'branding',     label: '🎨 Branding' },
     { key: 'seo',          label: '🔍 SEO' },
