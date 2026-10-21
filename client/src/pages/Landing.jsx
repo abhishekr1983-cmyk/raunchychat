@@ -172,6 +172,26 @@ export default function Landing() {
         </div>
       </div>
 
+      {/* ── SEO footer: crawlable internal links ── */}
+      <footer className="cb-seo-footer">
+        <nav>
+          <a href="/chat-with-strangers">Chat with strangers</a>
+          <a href="/random-chat">Random chat</a>
+          <a href="/adult-chat">Adult chat rooms</a>
+          <a href="/video-chat">Video chat</a>
+          <a href="/chat-rooms">Chat rooms</a>
+          <a href="/anonymous-chat">Anonymous chat</a>
+          <a href="/omegle-alternative">Omegle alternative</a>
+          <a href="/countries">Chat by country</a>
+        </nav>
+        <nav>
+          <a href="/about">About</a>
+          <a href="/safety">Safety</a>
+          <a href="/privacy">Privacy</a>
+          <a href="/terms">Terms</a>
+        </nav>
+      </footer>
+
       {/* ── Auth modals ── */}
       {modal && (
         <div className="modal-overlay" onClick={() => setModal(null)}>

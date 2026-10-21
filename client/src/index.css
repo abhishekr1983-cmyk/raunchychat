@@ -1608,3 +1608,9 @@ a { color: var(--accent); text-decoration: none; }
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 3px; }
+
+/* ── Landing SEO footer ── */
+.cb-seo-footer { max-width: 860px; margin: 24px auto 32px; padding: 0 16px; text-align: center; font-size: 13px; }
+.cb-seo-footer nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 16px; margin-bottom: 8px; }
+.cb-seo-footer a { color: var(--text-muted, #6b7280); text-decoration: none; }
+.cb-seo-footer a:hover { text-decoration: underline; }

@@ -119,8 +119,8 @@ async function initDB() {
     ['site_name', 'RaunchyChat'],
     ['site_logo', '🔥'],
     ['site_tagline', 'Meet. Flirt. Connect.'],
-    ['meta_title', 'RaunchyChat — Meet & Chat Online'],
-    ['meta_description', 'Free adult chat rooms. Meet new people from around the world anonymously. No sign-up required.'],
+    ['meta_title', 'Free Adult Chat Rooms — Chat with Strangers | RaunchyChat'],
+    ['meta_description', 'Free adult chat rooms for 18+. Chat with strangers worldwide by text, voice and video — anonymous, no signup, no download. Start chatting in seconds.'],
     ['meta_keywords', 'adult chat, free chat, anonymous chat, meet people online'],
     ['default_theme', 'dark-seduction'],
     ['ga_tracking_id', ''],
@@ -132,6 +132,9 @@ async function initDB() {
     ['telegram_channel_link', ''],
     ['google_client_id', ''],
   ];
+  // Upgrade the original placeholder SEO title/description (leave admin-edited values alone)
+  await client.execute({ sql: "UPDATE site_settings SET value = ? WHERE key = 'meta_title' AND value = 'RaunchyChat — Meet & Chat Online'", args: ['Free Adult Chat Rooms — Chat with Strangers | RaunchyChat'] });
+  await client.execute({ sql: "UPDATE site_settings SET value = ? WHERE key = 'meta_description' AND value LIKE 'Free adult chat rooms. Meet new people%'", args: ['Free adult chat rooms for 18+. Chat with strangers worldwide by text, voice and video — anonymous, no signup, no download. Start chatting in seconds.'] });
   for (const [key, value] of defaults) {
     try {
       await client.execute({
