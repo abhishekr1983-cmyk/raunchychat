@@ -1,5 +1,6 @@
 // ── SEO: server-rendered content pages, sitemap, robots, structured data ──
 // The React app is a client-only SPA, so every crawlable word lives here.
+const POSTS = require('./blog-posts');
 const SITE = 'https://www.raunchychat.com';
 const BRAND = 'RaunchyChat';
 const UPDATED = '2026-10-21';
@@ -14,12 +15,12 @@ const TOPICS = [
     slug: 'chat-with-strangers',
     title: 'Chat with Strangers Online — Free, No Signup',
     h1: 'Chat with Strangers Online',
-    desc: 'Chat with strangers online for free on RaunchyChat. No signup, no download — pick a nickname and start talking to real people worldwide in seconds.',
-    intro: 'Talking to someone new is the fastest cure for a boring night. RaunchyChat drops you into a live room full of real people from around the world — no account, no app, no payment. Pick a nickname, choose your country and you are chatting in under ten seconds.',
+    desc: 'Chat with strangers online for free on RaunchyChat. No signup, no download — pick a nickname and start talking to people worldwide in seconds.',
+    intro: 'Talking to someone new is the fastest cure for a boring night. RaunchyChat drops you into a live chat room with people from around the world — no account, no app, no payment. Pick a nickname, choose your country and you are chatting in under ten seconds.',
     sections: [
-      ['How stranger chat works', 'Enter a nickname, gender, country and age on the home page and press <em>Start Chatting</em>. You join the main room instantly, see who is online, and can open a private one-to-one conversation with anyone who accepts. Guest sessions last 24 hours; register a free account to keep your nickname, profile and friends.'],
+      ['How stranger chat works', 'Enter a nickname, gender, country and age on the home page and press <em>Start Chatting</em>. You join the main room instantly, see who is online, and can open a private one-to-one conversation with anyone who accepts. Guest sessions last 24 hours; register a free account to keep your nickname and profile.'],
       ['Why people use RaunchyChat', 'It is quick, it is free and it works in any modern browser on phone or desktop. You can stay anonymous, filter who you talk to by country, and move from text to voice or video when you both want to.'],
-      ['Stay safe while chatting', 'Never share your address, workplace, passwords or bank details. Use the block and report buttons the moment someone makes you uncomfortable — moderators review reports and automated filters catch abusive words. Read our <a href="/safety">safety guide</a> for more.'],
+      ['Stay safe while chatting', 'Never share your address, workplace, passwords or bank details. Close the conversation the moment someone makes you uncomfortable. Automated filters catch abusive words, and moderators block accounts that break the rules. Read our <a href="/safety">safety guide</a> for more.'],
     ],
     faq: [
       ['Is chatting with strangers on RaunchyChat free?', 'Yes. Text chat, private messages and public rooms are completely free, with no signup required.'],
@@ -30,18 +31,18 @@ const TOPICS = [
   {
     slug: 'random-chat',
     title: 'Random Chat — Meet Random People Online Free',
-    h1: 'Random Chat with Real People',
-    desc: 'Free random chat with real people online. Jump into a live room, meet random strangers from any country and chat by text, voice or video on RaunchyChat.',
+    h1: 'Random Chat Online',
+    desc: 'Free random chat online. Jump into a live room, meet random strangers from any country and chat by text, voice or video on RaunchyChat.',
     intro: 'Random chat is about the surprise: you never know who you will meet next. RaunchyChat keeps a live room busy around the clock, so there is always someone new to say hello to — whether you want small talk, flirting or a long late-night conversation.',
     sections: [
       ['Meet someone new every time', 'The online list updates in real time. Browse people by country, gender and age, then start a private chat with one tap. If the conversation fizzles, just move on to the next person.'],
       ['Text, voice and video', 'Start with text, and when you both feel comfortable, switch to a voice or video call right inside the chat — no phone number exchange needed.'],
-      ['Better than old random chat sites', 'Classic random chat sites closed or filled up with bots and spam. RaunchyChat uses word filters, rate limits, blocking and human moderation to keep rooms usable.'],
+      ['Better than old random chat sites', 'Classic random chat sites closed or filled up with bots and spam. RaunchyChat uses word filters, rate limits, automatic blocking of repeat offenders and admin moderation to keep rooms usable.'],
     ],
     faq: [
       ['What is random chat?', 'Random chat lets you talk with people you have never met, chosen from whoever is online at that moment.'],
-      ['Is RaunchyChat a good Omegle alternative?', 'Yes — it offers free anonymous text chat plus optional voice and video, works on mobile, and has blocking and reporting built in.'],
-      ['Is random chat safe?', 'It is as safe as you make it. Stay anonymous, never send money or personal details, and block anyone who behaves badly.'],
+      ['Is RaunchyChat a good Omegle alternative?', 'Yes — it offers free anonymous text chat plus optional voice and video, works on mobile, and filters abusive messages.'],
+      ['Is random chat safe?', 'It is as safe as you make it. Stay anonymous, never send money or personal details, and close any chat with someone who behaves badly.'],
     ],
   },
   {
@@ -74,7 +75,7 @@ const TOPICS = [
     ],
     faq: [
       ['Is video chat free?', 'Yes. Voice and video calls between users are free.'],
-      ['Can someone call me without permission?', 'No. Every call must be accepted, and you can block a user at any time.'],
+      ['Can someone call me without permission?', 'No. Every call must be accepted, and you can end a call at any time.'],
       ['Why is my camera not working?', 'Check that your browser has permission to use the camera and microphone, and that no other app is using them.'],
     ],
   },
@@ -85,7 +86,7 @@ const TOPICS = [
     desc: 'Join free online chat rooms with no registration. Live public rooms, private messages and voice & video calls with people from over 100 countries.',
     intro: 'Remember when chat rooms were the best part of the internet? RaunchyChat brings them back: busy public rooms, private one-to-one messages and a live list of who is online — all free and without registration.',
     sections: [
-      ['Public rooms and private chats', 'Talk to everyone in the main room or open a private conversation. Registered members can create their own rooms too.'],
+      ['Public rooms and private chats', 'Talk to everyone in the main room or open a private conversation. You can also start a group video conference and share the link.'],
       ['People from everywhere', 'Users join from the USA, UK, India, Canada, Australia and dozens of other countries. Browse by country to find people in your time zone, or see our <a href="/countries">country chat rooms</a>.'],
       ['Moderated, not sterile', 'Rooms are open and relaxed, but spam, scams and abuse are filtered and moderated so conversations stay fun.'],
     ],
@@ -99,16 +100,16 @@ const TOPICS = [
     slug: 'omegle-alternative',
     title: 'Best Omegle Alternative in 2026 — Free Stranger Chat',
     h1: 'The Omegle Alternative That Still Works',
-    desc: 'Looking for an Omegle alternative after Omegle shut down? RaunchyChat offers free anonymous stranger chat with text, voice and video — plus blocking and moderation.',
-    intro: 'Omegle closed for good in November 2023, and many of the copycats that followed are full of bots. RaunchyChat is a modern alternative: real people, anonymous by default, and tools to block anyone who ruins the vibe.',
+    desc: 'Looking for an Omegle alternative after Omegle shut down? RaunchyChat offers free anonymous stranger chat with text, voice and video — plus consent-first calls and moderation.',
+    intro: 'Omegle closed for good in November 2023, and many of the copycats that followed are full of bots. RaunchyChat is a modern alternative: anonymous by default, with consent-first calls and moderation.',
     sections: [
-      ['What you get', 'Anonymous guest chat, a live list of who is online, country filters, private messages, voice and video calls, friends and profiles — all free.'],
+      ['What you get', 'Anonymous guest chat, a live list of who is online, country filters, private messages, voice and video calls and profiles — all free.'],
       ['What is different', 'Instead of pairing you blindly with one camera, you can see who is online and choose who to talk to. Calls only start when both people agree.'],
       ['Adults only', 'RaunchyChat is for people aged 18 and over. That keeps conversations adult and lets us remove minors quickly.'],
     ],
     faq: [
       ['Why did Omegle shut down?', 'Omegle\'s founder closed the service in November 2023, citing the cost of fighting misuse.'],
-      ['Is RaunchyChat like Omegle?', 'It shares the idea of anonymous chat with strangers, but adds a live user list, country filters, friends, blocking and moderation.'],
+      ['Is RaunchyChat like Omegle?', 'It shares the idea of anonymous chat with strangers, but adds a live user list, country filters, consent-first calls and moderation.'],
       ['Is it free?', 'Yes, chatting is free.'],
     ],
   },
@@ -155,7 +156,7 @@ const COUNTRIES = [
   sections: [
     [`Find people in ${name}`, `After you join, filter the online list by country to see who is chatting from ${name}. Profiles show region and age, so you can find people in your own time zone or close to home.`],
     ['Text first, then voice or video', 'Break the ice with messages and switch to a private voice or video call when you both agree. Everything runs in your browser.'],
-    ['Free and anonymous', 'Guests only need a nickname. Register for free if you want a permanent profile, friends list and your own rooms.'],
+    ['Free and anonymous', 'Guests only need a nickname. Register for free if you want a permanent profile.'],
   ],
   faq: [
     [`Is ${name} chat free?`, 'Yes, chatting on RaunchyChat is free.'],
@@ -170,17 +171,17 @@ const INFO = {
     title: 'About RaunchyChat',
     desc: 'RaunchyChat is a free, browser-based chat community for adults to meet strangers by text, voice and video. Learn who we are and how the site works.',
     body: `<p>RaunchyChat is a free chat community for adults (18+). It brings back the classic chat-room experience — live rooms, a list of who is online and private messages — and adds modern voice and video calling that runs right in the browser.</p>
-<h2>How it works</h2><p>Pick a nickname, choose your gender, country and age, and you are in. Guests can chat for 24 hours; registering is free and keeps your profile, friends and rooms.</p>
+<h2>How it works</h2><p>Pick a nickname, choose your gender, country and age, and you are in. Guests can chat for 24 hours; registering is free and keeps your profile.</p>
 <h2>Our rules</h2><ul><li>You must be 18 or older.</li><li>Respect consent — no unwanted explicit messages or calls.</li><li>No spam, scams, selling or advertising.</li><li>No hate speech, threats or illegal content.</li></ul>
 <p>Breaking the rules gets accounts blocked. Read the full <a href="/terms">terms</a> and our <a href="/safety">safety tips</a>.</p>`,
   },
   safety: {
     title: 'Online Chat Safety Tips',
-    desc: 'How to stay safe when chatting with strangers online: protect your privacy, spot scams and catfish, and use blocking and reporting on RaunchyChat.',
+    desc: 'How to stay safe when chatting with strangers online: protect your privacy, spot scams and catfish, and know what to do if a chat goes wrong.',
     body: `<p>Most people online are just looking for a good conversation, but a few are not. These habits keep you in control.</p>
 <h2>Protect your identity</h2><ul><li>Use a nickname you do not use anywhere else.</li><li>Never share your home address, workplace, school or daily routine.</li><li>Be careful with photos — backgrounds, uniforms and landmarks can reveal where you are.</li></ul>
-<h2>Spot scams</h2><ul><li>Nobody genuine will ask you for money, gift cards or crypto.</li><li>Be wary of anyone who quickly pushes you to another app or a "verification" link.</li><li>Sextortion is real: if someone threatens to share images, do not pay — block, report and contact local police.</li></ul>
-<h2>Use the tools</h2><p>Block anyone who makes you uncomfortable and report them so moderators can act. Calls only connect when you accept them.</p>
+<h2>Spot scams</h2><ul><li>Nobody genuine will ask you for money, gift cards or crypto.</li><li>Be wary of anyone who quickly pushes you to another app or a "verification" link.</li><li>Sextortion is real: if someone threatens to share images, do not pay — stop replying, save evidence and contact local police.</li></ul>
+<h2>Use the tools</h2><p>Close any chat that makes you uncomfortable. Word filters and moderators block abusive accounts. Calls only connect when you accept them.</p>
 <h2>Get help</h2><p>If you are in danger, contact your local emergency number. In the US you can reach the Cyber Civil Rights Initiative helpline at 844-878-2274; in the UK, the Revenge Porn Helpline at 0345 6000 459.</p>`,
   },
   privacy: {
@@ -222,7 +223,7 @@ const NAV_TOPICS = TOPICS.map((t) => [`/${t.slug}`, t.h1.replace(/ Online$/, '')
 function footer() {
   return `<footer><div class="w">
 <div>${NAV_TOPICS.map(([h, l]) => `<a href="${h}">${esc(l)}</a>`).join('')}</div>
-<div><a href="/countries">Chat rooms by country</a><a href="/about">About</a><a href="/safety">Safety</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></div>
+<div><a href="/blog">Blog</a><a href="/countries">Chat rooms by country</a><a href="/about">About</a><a href="/safety">Safety</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></div>
 <p>© ${new Date().getFullYear()} ${BRAND} · Adults 18+ only</p></div></footer>`;
 }
 
@@ -261,7 +262,7 @@ function contentPage(p, path, parent) {
   const body = `${c.html}<h1>${esc(p.h1)}</h1><p class="lead">${p.intro}</p>${ctaBox('Ready to meet someone new?')}
 ${p.sections.map(([h, t]) => `<h2>${esc(h)}</h2><p>${t}</p>`).join('\n')}
 <h2>Frequently asked questions</h2>${p.faq.map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}
-${ctaBox('Thousands of conversations are happening right now.')}
+${ctaBox('Someone new is always around to talk to.')}
 <h2>Explore more</h2><ul class="grid">${related.map((t) => `<li><a href="/${t.slug}">${esc(t.h1)}</a></li>`).join('')}<li><a href="/countries">Chat rooms by country</a></li></ul>`;
   return shell({ path, title: p.title, desc: p.desc, body, jsonld: [c.ld, faqLd] });
 }
@@ -280,6 +281,35 @@ function infoPage(key) {
   return shell({ path: `/${key}`, title: `${p.title} | ${BRAND}`, desc: p.desc, body: `${c.html}<h1>${esc(p.title)}</h1>${p.body}${ctaBox('Start a conversation')}`, jsonld: [c.ld] });
 }
 
+
+// ── Blog ──────────────────────────────────────────────────────
+function fmtDate(d) {
+  return new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+}
+
+function blogIndex() {
+  const c = crumbs([[null, 'Blog']]);
+  const body = `${c.html}<h1>RaunchyChat Blog</h1><p class="lead">Guides to chatting with strangers, flirting, role-play, exploring fantasies and staying safe online.</p>
+${POSTS.map((p) => `<article class="box"><h2 style="margin-top:0"><a href="/blog/${p.slug}">${esc(p.title)}</a></h2><p>${esc(p.desc)}</p><div class="age">${fmtDate(p.date)}</div></article>`).join('\n')}`;
+  const ld = { '@context': 'https://schema.org', '@type': 'Blog', name: `${BRAND} Blog`, url: `${SITE}/blog`,
+    blogPost: POSTS.map((p) => ({ '@type': 'BlogPosting', headline: p.title, url: `${SITE}/blog/${p.slug}`, datePublished: p.date })) };
+  return shell({ path: '/blog', title: `Blog — Chat, Flirting & Safety Guides | ${BRAND}`, desc: 'RaunchyChat blog: how to talk to strangers, flirt online, start role-play, explore fantasies safely and avoid chat scams.', body, jsonld: [c.ld, ld] });
+}
+
+function blogPost(p) {
+  const path = `/blog/${p.slug}`;
+  const c = crumbs([['/blog', 'Blog'], [null, p.title]]);
+  const more = POSTS.filter((x) => x.slug !== p.slug).slice(0, 4);
+  const linkName = (h) => (TOPICS.find((t) => `/${t.slug}` === h) || {}).h1 || (POSTS.find((x) => `/blog/${x.slug}` === h) || {}).title || (INFO[h.slice(1)] || {}).title || h;
+  const body = `${c.html}<article><h1>${esc(p.title)}</h1><div class="age">${fmtDate(p.date)} · ${BRAND} team</div>
+${p.body}</article>${ctaBox('Try it yourself, free and anonymous.')}
+<h2>Related</h2><ul class="grid">${(p.related || []).map((h) => `<li><a href="${h}">${esc(linkName(h))}</a></li>`).join('')}${more.map((x) => `<li><a href="/blog/${x.slug}">${esc(x.title)}</a></li>`).join('')}</ul>`;
+  const ld = { '@context': 'https://schema.org', '@type': 'BlogPosting', headline: p.title, description: p.desc, datePublished: p.date, dateModified: p.date,
+    mainEntityOfPage: SITE + path, image: `${SITE}/og.png`, author: { '@type': 'Organization', name: BRAND, url: `${SITE}/` },
+    publisher: { '@type': 'Organization', name: BRAND, logo: { '@type': 'ImageObject', url: `${SITE}/icon-512.png` } } };
+  return shell({ path, title: `${p.title} | ${BRAND}`, desc: p.desc, body, jsonld: [c.ld, ld] }).replace('<meta property="og:type" content="website">', '<meta property="og:type" content="article">');
+}
+
 function notFoundPage() {
   return shell({ path: '/404', title: `Page not found | ${BRAND}`, desc: 'This page does not exist.', body: `<h1>Page not found</h1><p>That page does not exist. Try one of these instead:</p><ul class="grid">${NAV_TOPICS.map(([h, l]) => `<li><a href="${h}">${esc(l)}</a></li>`).join('')}</ul>${ctaBox('Or start chatting now')}` })
     .replace('index,follow,max-image-preview:large', 'noindex');
@@ -291,6 +321,8 @@ for (const t of TOPICS) PAGES.set(`/${t.slug}`, () => contentPage(t, `/${t.slug}
 PAGES.set('/countries', countryHub);
 for (const k of COUNTRIES) PAGES.set(`/${k.slug}`, () => contentPage(k, `/${k.slug}`, ['/countries', 'Chat rooms by country']));
 for (const key of Object.keys(INFO)) PAGES.set(`/${key}`, () => infoPage(key));
+PAGES.set('/blog', blogIndex);
+for (const p of POSTS) PAGES.set(`/blog/${p.slug}`, () => blogPost(p));
 
 const cache = new Map();
 function renderPage(path) {
@@ -300,8 +332,8 @@ function renderPage(path) {
 }
 
 function sitemap() {
-  const urls = [['/', '1.0', 'daily'], ...[...PAGES.keys()].map((p) => [p, INFO[p.slice(1)] ? '0.3' : p.startsWith('/country/') ? '0.7' : '0.9', 'weekly'])];
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map(([p, pr, f]) => `  <url><loc>${SITE}${p}</loc><lastmod>${UPDATED}</lastmod><changefreq>${f}</changefreq><priority>${pr}</priority></url>`).join('\n')}\n</urlset>\n`;
+  const urls = [['/', '1.0', 'daily'], ...[...PAGES.keys()].map((p) => [p, INFO[p.slice(1)] ? '0.3' : p.startsWith('/country/') ? '0.7' : p.startsWith('/blog') ? '0.6' : '0.9', 'weekly'])];
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map(([p, pr, f]) => `  <url><loc>${SITE}${p}</loc><lastmod>${(POSTS.find((x) => `/blog/${x.slug}` === p) || {}).date || UPDATED}</lastmod><changefreq>${f}</changefreq><priority>${pr}</priority></url>`).join('\n')}\n</urlset>\n`;
 }
 
 const ROBOTS = `User-agent: *\nAllow: /\nAllow: /api/stats\nAllow: /api/admin/settings$\nDisallow: /api/\nDisallow: /admin\nDisallow: /conference/\n\nSitemap: ${SITE}/sitemap.xml\n`;
@@ -315,7 +347,7 @@ const HOME_LD = [
 
 const HOME_STATIC = `<main style="max-width:860px;margin:0 auto;padding:24px 16px;font-family:system-ui,sans-serif">
 <h1>Chat with Strangers Worldwide — Free Adult Chat Rooms</h1>
-<p>RaunchyChat is a free chat site for adults (18+). Meet new people, flirt and make friends in live chat rooms, then move to private voice or video calls — no signup or download needed.</p>
-<ul>${NAV_TOPICS.map(([h, l]) => `<li><a href="${h}">${esc(l)}</a></li>`).join('')}<li><a href="/countries">Chat rooms by country</a></li></ul></main>`;
+<p>RaunchyChat is a free chat site for adults (18+). Meet new people, flirt and meet new people in live chat rooms, then move to private voice or video calls — no signup or download needed.</p>
+<ul>${NAV_TOPICS.map(([h, l]) => `<li><a href="${h}">${esc(l)}</a></li>`).join('')}<li><a href="/countries">Chat rooms by country</a></li><li><a href="/blog">Blog</a></li></ul></main>`;
 
 module.exports = { SITE, esc, renderPage, sitemap, ROBOTS, HOME_LD, HOME_STATIC, notFoundPage, NAV_TOPICS, COUNTRIES };

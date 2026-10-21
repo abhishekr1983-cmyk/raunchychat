@@ -183,6 +183,7 @@ export default function Landing() {
           <a href="/anonymous-chat">Anonymous chat</a>
           <a href="/omegle-alternative">Omegle alternative</a>
           <a href="/countries">Chat by country</a>
+          <a href="/blog">Blog</a>
         </nav>
         <nav>
           <a href="/about">About</a>
